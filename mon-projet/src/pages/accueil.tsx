@@ -58,7 +58,7 @@ function Accueil() { //composant principal
             <Button
               variant="contained" //bouton rempli
               startIcon={<AddIcon />}
-              //onClick={ajouterItem}
+              onClick={() => navigate('/ajout')} //redirection
               size="large"
               sx={{
                 py:1.5,

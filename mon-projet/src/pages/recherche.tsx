@@ -116,7 +116,7 @@ function Recherche() {
         </Select>
       </FormControl>
 
-         {/* Champs dynamiques pour les noms des capteurs */}
+         {/* champs dynamiques pour les noms des capteurs */}
          {nomsCapteurs.map((nom, index) => (
                   <FormControl key={index}fullWidth required>
                   <InputLabel>{`Capteur ${index + 1}`}</InputLabel>
