@@ -13,7 +13,7 @@ import {
   TextField,
   Stack //aligner boutons en colonne par ex
 } from '@mui/material'; //import MUI
-import { Add as AddIcon, Delete as DeleteIcon, Search as SearchIcon, Settings as SettingsIcon } from '@mui/icons-material'; //icônes texte
+import { Person as PersonIcon, Add as AddIcon, Delete as DeleteIcon, Search as SearchIcon, Settings as SettingsIcon } from '@mui/icons-material'; //icônes texte
 
 /*
 interface Item {
@@ -41,7 +41,7 @@ function Accueil() { //composant principal
 
       <Container maxWidth="lg" sx={{mt : 4}}> 
         <Paper
-          elevation={3} //effet d'ombre qd on survole un bouton
+          elevation={3} //effet d'ombre du container (carte)
           sx = {{
             p : 4, //padding
             display : 'flex',
@@ -82,8 +82,6 @@ function Accueil() { //composant principal
               >
               RECHERCHER DES DONNÉES
             </Button>
-
-
       
             <Button
               variant="contained"
@@ -97,6 +95,22 @@ function Accueil() { //composant principal
               //onClick={lookForCaptor}
               >
               MAINTENANCE DES CAPTEURS
+            </Button>
+
+
+
+            <Button
+              variant="contained" //bouton rempli
+              startIcon={<PersonIcon />}
+              onClick={() => navigate('/user')} //redirection
+              size="large"
+              sx={{
+                py:1.5,
+              bgcolor :'#A84296',
+              '&:hover': { bgcolor: '#6F1478' } //qd on passe dessus
+              }}
+            >
+                GESTION UTILISATEUR
             </Button>
             
           </Stack>

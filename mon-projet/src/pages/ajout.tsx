@@ -39,7 +39,7 @@ function Ajout() {
 
 
       <Container maxWidth="md" sx={{ mt: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
+      <Paper elevation={4} sx={{ p: 4 }}> 
         <Typography variant="h4" gutterBottom align="center">Veuillez choisir une méthode :</Typography>
         
         <Stack direction="row" spacing={2} justifyContent="center">
