@@ -86,13 +86,13 @@ function Accueil() { //composant principal
             <Button
               variant="contained"
               startIcon={<SettingsIcon />}
+              onClick={() => navigate('/maintenance')}
               size="large"
               sx={{
                 py:1.5,
               bgcolor :'#808080',
               '&:hover': { bgcolor: '#515151' } //qd on passe dessus
               }}
-              //onClick={lookForCaptor}
               >
               MAINTENANCE DES CAPTEURS
             </Button>
