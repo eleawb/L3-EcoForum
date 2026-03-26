@@ -35,7 +35,7 @@ function Maintenance() {
               <Toolbar>
               
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                  Maintenance des capteurs
+                  MAINTENANCE DES CAPTEURS
                 </Typography>
                 <Button color="inherit" onClick={() => navigate('/')}>Retour</Button>
               </Toolbar>

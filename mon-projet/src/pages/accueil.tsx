@@ -35,7 +35,8 @@ function Accueil() { //composant principal
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             EcoForum
           </Typography>
-          <Button color="inherit">Connexion</Button>
+          <Button color="inherit" onClick={() => navigate('/connexion')}>Connexion</Button>
+
         </Toolbar>
       </AppBar>
 

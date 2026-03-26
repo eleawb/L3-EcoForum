@@ -31,7 +31,7 @@ function Ajout() {
       }}
       >
             <Toolbar>
-                <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>Recherche de données</Typography>
+                <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>AJOUTER DES DONNÉES</Typography>
                 <Button color="inherit" onClick={() => navigate('/')}>Retour</Button>
         
             </Toolbar>

@@ -80,7 +80,7 @@ function Recherche() {
         <Toolbar>
         
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Recherche de données
+            RECHERCHER DES DONNÉES
           </Typography>
           <Button color="inherit" onClick={() => navigate('/')}>Retour</Button>
         </Toolbar>
@@ -90,6 +90,7 @@ function Recherche() {
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" gutterBottom align="center">Formulaire de recherche</Typography>
 
+      
         <form onSubmit={handleSubmit}>
           <Stack spacing={3}> {/*espacé*/}
           <TextField
@@ -135,7 +136,6 @@ function Recherche() {
                 </FormControl>
               ))}
               {/*à changer : ajouter qu'on peut pas remettre un qu'on a déjà choisi*/}
-
           <TextField
             label="blabla"
             variant="outlined"

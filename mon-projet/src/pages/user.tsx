@@ -35,7 +35,7 @@ function User() {
               <Toolbar>
               
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                  Gestion utilisateur
+                  GESTION UTILISATEUR
                 </Typography>
                 <Button color="inherit" onClick={() => navigate('/')}>Retour</Button>
               </Toolbar>
