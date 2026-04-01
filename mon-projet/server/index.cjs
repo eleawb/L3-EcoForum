@@ -60,6 +60,24 @@ app.get('/api/instruments', async (req, res) => {
     }
 });
 
+// Route pour récupérer les capteurs liés à un instrument
+app.get('/api/capteurs/by-instrument/:id', async (req, res) => {
+    const { id } = req.params;
+    console.log(`Recherche des capteurs pour l'instrument ID: ${id}`);
+    try {
+        // Supposons que tes capteurs ont une colonne "Id_instrument" qui fait le lien
+        const result = await client.query(
+            `SELECT * FROM public."Capteur" WHERE "Id_instrument" = $1 ORDER BY "Id" ASC`,
+            [id]
+        );
+        console.log(`${result.rows.length} capteurs trouvés pour cet instrument`);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Erreur:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.listen(port, () => {
     console.log(`Serveur démarré sur http://localhost:${port}`);
 });
