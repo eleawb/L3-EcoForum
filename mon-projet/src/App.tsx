@@ -5,6 +5,7 @@ import Ajout from './pages/ajout';//choix du format d'ajout de données
 import User from './pages/user'; //paramètres user
 import Maintenance from './pages/maintenance'; //paramètres capteurs
 import Connexion from './pages/connexion'; //paramètres connexion
+import DepotFichier from './pages/depotFichier'; //Formulaire de depot de fichier
 
 
 
@@ -18,6 +19,7 @@ function App() {
       <Route path="/user" element={<User />} />
       <Route path="/maintenance" element={<Maintenance />} />
       <Route path="/connexion" element={<Connexion />} />
+      <Route path="/depotFichier" element={<DepotFichier />} />
 
 
     </Routes>

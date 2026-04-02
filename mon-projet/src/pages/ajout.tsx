@@ -47,6 +47,7 @@ function Ajout() {
               type="submit"
               variant="contained"
                startIcon={<AddIcon />}  
+               onClick={()=> navigate('/depotFichier')}//redirection vers les depot
             sx={{
             bgcolor:'#EC9706',
             '&:hover': { bgcolor: '#C78023' },
