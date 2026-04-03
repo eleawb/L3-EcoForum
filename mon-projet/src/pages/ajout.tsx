@@ -58,6 +58,7 @@ function Ajout() {
 
             <Button
               type="submit"
+              onClick={() => navigate('/saisieManuelle')}
               variant="contained"
                startIcon={<AddIcon />}  
             sx={{

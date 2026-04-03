@@ -32,6 +32,7 @@ function DepotFichier(){
     //Etats des inputs qui apparaisent apres l-upload du document
     const [showAdditionalInputs, setShowAdditionalInputs] = useState<boolean>(false);
     const [nom, setNom] = useState<string>('');
+    const [numSerie, setnumSerie] = useState<string>('');
     const [extension, setExtension] = useState<string>('');
     const [dateImport, setDateImport] = useState<string>('');
     const [typeSource, setTypeSource] = useState<string>('');
@@ -41,6 +42,7 @@ function DepotFichier(){
     //Verifier que les 2e inputs ont des valeurs non nulles
     const areAdditionalInputsComplete = 
     nom !== '' && 
+    numSerie !== '' && 
     extension !== '' && 
     dateImport !== '' && 
     typeSource !== '';
@@ -49,14 +51,25 @@ function DepotFichier(){
     const handleInstrumentChange = (event: SelectChangeEvent) => {
     setSelectedInstrument(event.target.value);
     };
-  
     const handleCapteurChange = (event: SelectChangeEvent) => {
     setSelectedCapteur(event.target.value);
     };
+  
+    const autoFillCapteurFromFile = (fileName: string) => {
+    if (fileName.includes('K-')) {
+      setSelectedCapteur('capteur1'); // KUNAK
+    } else if (fileName.includes('(n°')) {
+      setSelectedCapteur('capteur2'); // HOBO
+    }  else if (fileName.includes('te-')) {
+      setSelectedCapteur('capteur3'); // Station Meteo
+    } else if (fileName.includes('data_')) {
+      setSelectedCapteur('capteur4'); // TSM4
+    }
+  };
 
     //Traitement du upload dun fichier
     const handleFileUpload = () => {
-    //creation cache dun file input
+    // creation cache d'un file input
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = '.csv, .txt, .json'; // modifiable
@@ -64,11 +77,14 @@ function DepotFichier(){
     fileInput.onchange = (e: Event) => {
       const target = e.target as HTMLInputElement;
       if (target.files && target.files.length > 0) {
-        setSelectedFile(target.files[0]);
-        setShowAdditionalInputs(true);//mettre la valeur de showAdditionalInputs a true pour montrer les additional inputs
-      } };
-      fileInput.click();
-  };
+        const file = target.files[0];
+        setSelectedFile(file);
+        setShowAdditionalInputs(true); // montrer les additional inputs
+        autoFillCapteurFromFile(file.name); // Auto-fill the capteur select based on file name
+      }
+    };  
+    fileInput.click();
+};
 
     //Traitement des extensions du fichier
     const handleAutofillExtension = () => {
@@ -112,6 +128,7 @@ function DepotFichier(){
     console.log('Instrument:', selectedInstrument);
     console.log('Capteur:', selectedCapteur);
     console.log('Nom:', nom);
+    console.log('Numero de serie:', numSerie);
     console.log('Extension:', extension);
     console.log('Date import:', dateImport);
     console.log('Type source:', typeSource);
@@ -128,7 +145,7 @@ function DepotFichier(){
       }}
       >
         <Toolbar>
-                <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>AJOUT DE DONNEES</Typography>
+                <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>DEPOT DE FICHIER</Typography>
                 <Button color="inherit" onClick={() => navigate('/ajout')}>Retour</Button>
             </Toolbar>
         </AppBar>
@@ -137,8 +154,33 @@ function DepotFichier(){
                 <Typography variant ='h4' gutterBottom align ="center">AJOUT</Typography>
 
                 <form onSubmit={handleSubmit}>
-                    <Stack spacing={3}>
-                        <FormControl fullWidth required>
+
+                <Stack spacing={3}>
+                      <Button
+                        type="button"
+                        variant="contained"
+                        onClick={handleFileUpload}
+                        //disabled={!isFormComplete}
+                        sx={{
+                          bgcolor: '#EC9706',
+                        //bgcolor: !isFormComplete ? '#CCCCCC' : '#EC9706',
+                        //color: !isFormComplete ? '#666666' : '#FFFFFF',
+                        '&:hover': {
+                            bgcolor: !isFormComplete ? '#CCCCCC' : '#C78023',},
+                        }}
+                        >SELECTION DE FICHIER
+                        </Button>
+                        {selectedFile && (
+                    <Typography variant="body2" sx={{ color: 'green', textAlign: 'center' }}>
+                      Fichier sélectionné: {selectedFile.name}
+                    </Typography>
+                  )}
+
+
+
+                {showAdditionalInputs && (
+                <>
+                <FormControl fullWidth required>
                         <InputLabel>Sélectionnez l-instrument pour lequel vous depossez un fichier</InputLabel>
                         <Select
                         value={selectedInstrument}
@@ -155,45 +197,19 @@ function DepotFichier(){
 
 
                         <FormControl fullWidth required>
-                        <InputLabel>Sélectionnez le capteur pour lequel vous depossez un fichier</InputLabel>
+                        <InputLabel>Sélectionnez le capteur pour lequel vous déposez un fichier</InputLabel>
                         <Select
-                        value={selectedCapteur}
-                        onChange={handleCapteurChange}
-                        label="Sélectionnez le capteur pour lequel vous déposez un fichier">
-
-                        <MenuItem value="capteur1">Capteur 1</MenuItem>
-                        <MenuItem value="capteur2">Capteur 2</MenuItem>
-                        <MenuItem value="capteur3">Capteur 3</MenuItem>
-
+                          value={selectedCapteur}
+                          onChange={handleCapteurChange}
+                          label="Sélectionnez le capteur pour lequel vous déposez un fichier"
+                        >
+                          <MenuItem value="capteur1">KUNAK</MenuItem>
+                          <MenuItem value="capteur2">HOBO</MenuItem>
+                          <MenuItem value="capteur3">Station Meteo</MenuItem>
+                          <MenuItem value="capteur4">TSM4</MenuItem> {/* Fixed duplicate value */}
                         </Select>
-                        </FormControl>
-
+                      </FormControl>
                         
-
-
-                    <Button
-                    type="button"
-                    variant="contained"
-                    onClick={handleFileUpload}
-                    disabled={!isFormComplete}
-                    sx={{
-                    bgcolor: !isFormComplete ? '#CCCCCC' : '#EC9706',
-                    color: !isFormComplete ? '#666666' : '#FFFFFF',
-                    '&:hover': {
-                        bgcolor: !isFormComplete ? '#CCCCCC' : '#C78023',},
-                    }}
-                    >
-                    {!isFormComplete ? 'Sélectionnez d\'abord instrument et capteur' : 'Parcourir pour sélectionner un fichier'}
-                    </Button>
-
-                {selectedFile && (
-                <Typography variant="body2" sx={{ color: 'green', textAlign: 'center' }}>
-                  Fichier sélectionné: {selectedFile.name}
-                </Typography>
-              )}
-
-                              {showAdditionalInputs && (
-                <>
                   <TextField
                     label="Nom"
                     variant="outlined"
@@ -203,10 +219,19 @@ function DepotFichier(){
                     onChange={(e) => setNom(e.target.value)}
                     placeholder="Entrez votre nom"
                   />
+                  <TextField
+                    label="Numero de serie"
+                    variant="outlined"
+                    fullWidth
+                    required
+                    value={numSerie}
+                    onChange={(e) => setnumSerie(e.target.value)}
+                    placeholder="Entrez le numero de serie"
+                  />
                   
                   <Stack direction="row" spacing={2} alignItems="center">
                     <TextField
-                      label="Extension"
+                      label="Format(extension)"
                       variant="outlined"
                       fullWidth
                       required
