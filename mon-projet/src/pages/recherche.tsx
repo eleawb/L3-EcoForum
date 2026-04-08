@@ -38,12 +38,19 @@ function Recherche() {
  const [capteursDisponibles, setCapteursDisponibles] = useState<any[]>([]);
  const [instrumentsDisponibles, setInstrumentsDisponibles] = useState<any[]>([]);
  const [loading, setLoading] = useState(true);
+ const [isOk, setOk] = useState(true);
+
 
  //pour selectionner les capteurs correspondant à l'instrument, etc
  const [capteursParInstrument, setCapteursParInstrument] = useState<{ [key: number]: any[] }>({}); //stocke les capteurs par instru
   const [instrumentSelectionne, setInstrumentSelectionne] = useState<string>('');
   const [capteursSelectionnes, setCapteursSelectionnes] = useState<{ [key: number]: string }>({}); //stocke le capteur par instru
 const[categorieSelectionnee, setCategorieSelectionnee] = useState<string>('');
+const [capteursFiltres, setCapteursFiltres] = useState<any[]>([]); //filtre de catégorie
+const [categoriesSelectionnees, setCategoriesSelectionnees] = useState<{ [key: number]: string }>({});
+const [categoriesFiltrees, setCategoriesFiltrees] = useState<{ [key: number]: any[] }>({});
+
+
 console.log("test debug avant useEffect");
     // Charger les capteurs depuis la BDD au chargement de la page
   useEffect(() => {
@@ -66,6 +73,14 @@ console.log("test debug avant useEffect");
         const categoriesData = await categoriesRes.json();
         console.log("Catégories reçues :", categoriesData);
         setCategories(categoriesData||[]);
+
+        //initialiser avec tous les capteurs pr chaque index
+        const initialFiltres: { [key: number]: any[] } = {};
+        for (let i = 0; i < nomsElements.length; i++) {
+          initialFiltres[i] = capteursData || [];
+        }
+        setCategoriesFiltrees(initialFiltres);
+        console.log(categoriesFiltrees);
         
         setLoading(false);
       } catch (error) {
@@ -94,7 +109,34 @@ console.log("test debug avant useEffect");
         return newNoms.slice(0, nb);
       }
     });
-  };
+     // maj categoriesFiltrees pour les nouveaux index
+     setCategoriesFiltrees(prev => {
+      const newFiltres = { ...prev };
+      for (let i = 0; i < nb; i++) {
+        if (!newFiltres[i]) {
+          newFiltres[i] = capteursDisponibles;
+        }
+      }
+      Object.keys(newFiltres).forEach(key => {
+        if (parseInt(key) >= nb) {
+          delete newFiltres[parseInt(key)];
+        }
+      });
+      return newFiltres;
+    });
+
+ // Aussi pour categoriesSelectionnees
+ setCategoriesSelectionnees(prev => {
+  const newSelections = { ...prev };
+  Object.keys(newSelections).forEach(key => {
+    if (parseInt(key) >= nb) {
+      delete newSelections[parseInt(key)];
+    }
+  });
+  return newSelections;
+});
+};
+
   //changement nom capteur
   const handleNomChange = (index: number, value: string) => {
     setElementsNames(prev => {
@@ -103,6 +145,7 @@ console.log("test debug avant useEffect");
       return newNoms;
     });
   };
+  
 
   //changement d'instru
   const handleInstrumentChange = async (index: number, value: string) => {
@@ -139,13 +182,6 @@ const handleCapteurChange = (instrumentIndex: number, capteurNom: string) => {
       [instrumentIndex]: capteurNom
   }));
 };
-  
-//changement catégorie
-const handleCategorieChange = async (index: number, value: string) => {
-  setCategorieSelectionnee(value);
-}
-
-  
 
 
 
@@ -160,6 +196,91 @@ const handleCategorieChange = async (index: number, value: string) => {
       setCapteursParInstrument([]);
     }
   };
+  
+
+
+// Filtrer les capteurs par catégorie
+const filtrerCapteursParCategorie = async (categorieNom: string) => {
+  
+  if (!categorieNom) {
+      // Si aucune catégorie, afficher tous les capteurs
+      const response = await fetch('http://localhost:3000/api/capteurs');
+      const data = await response.json();
+      setCapteursFiltres(data);
+      return;
+  }
+  
+  try {
+      const response = await fetch('http://localhost:3000/api/capteurs/by-categorie', {
+        method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ categorie: categorieNom })
+        });
+        
+      if (response.ok) {
+        const data = await response.json();
+        setCapteursFiltres(data);
+
+        if (data.length === 0) {
+          console.log(`Aucun capteur trouvé pour la catégorie: ${categorieNom}`);
+          setOk(false);
+      }
+    } else {
+        setCapteursFiltres([]);
+        setOk(false);
+    }
+    
+    
+  } catch (error) {
+      console.error('Erreur lors du filtrage:', error);
+      setCapteursFiltres([]);
+      setOk(false);
+  }
+};
+
+//changement catégorie
+const handleCategorieChange = async (index: number, value: string) => {
+  setCategoriesSelectionnees(prev => ({
+      ...prev,
+      [index]: value
+  }));
+  
+  if (!value) {
+      setCategoriesFiltrees(prev => ({
+          ...prev,
+          [index]: capteursDisponibles
+      }));
+      return;
+  }
+  
+  try {
+      const response = await fetch('http://localhost:3000/api/capteurs/by-categorie', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ categorie: value })
+      });
+      
+      if (response.ok) {
+          const data = await response.json();
+          setCategoriesFiltrees(prev => ({
+              ...prev,
+              [index]: data
+          }));
+      } else {
+          setCategoriesFiltrees(prev => ({
+              ...prev,
+              [index]: []
+          }));
+      }
+  } catch (error) {
+      console.error('Erreur:', error);
+      setCategoriesFiltrees(prev => ({
+          ...prev,
+          [index]: []
+      }));
+  }
+};
+
 
 
 
@@ -185,7 +306,7 @@ const handleCategorieChange = async (index: number, value: string) => {
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault(); // empêche le rechargement de la page
-        let nomsRecherche : string[] = [];
+        let nomsRecherche: string[] = [];
         // mode capteur 
         if (choixCI === 'capteurs') {
           nomsRecherche = nomsElements.filter(nom => nom.trim());
@@ -255,6 +376,8 @@ const handleCategorieChange = async (index: number, value: string) => {
                 setNombreElements(1);
                 setCapteursParInstrument({});
                 setCapteursSelectionnes({});
+                setCategorieSelectionnee('');
+                setCapteursFiltres([]);
             }}
               >
               <FormControlLabel value="instruments" control={<Radio />} label="Instrument(s) de mesure" />
@@ -267,56 +390,80 @@ const handleCategorieChange = async (index: number, value: string) => {
 
 
  {/*mode CAPTEURS */}
- {choixCI === 'capteurs' && (
-                <>
-                  <TextField
-                    label="Nombre de capteur(s) recherché(s) :"
-                    type="number"
-                    value={nombreElements}
-                    onChange={handleNombreChange}
-                    inputProps={{ min: 1, max: 10 }}
-                    required
-                    fullWidth
-                  />
-                          
-        
-                    
+ 
+{choixCI === 'capteurs' && (
+    <>
+        <TextField
+            label="Nombre de capteur(s) recherché(s) :"
+            type="number"
+            value={nombreElements}
+            onChange={handleNombreChange}
+            inputProps={{ min: 1, max: 10 }}
+            required
+            fullWidth
+        />
 
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <CircularProgress />
-      </Box>
-      ) : capteursDisponibles.length === 0 ? (
-        <Typography color="error">Aucun capteur trouvé</Typography>
+        {loading ? (
+            <CircularProgress />
         ) : (
-          nomsElements.map((nom, index) => (
-            <FormControl key={`${choixCI}-${index}`} fullWidth required>
-               <InputLabel>Sélectionnez un capteur</InputLabel>
- {/*{`${labelNom} n°${index + 1}`}*/}
-              <Select
-                value={nom}
-                label={`${labelNom} n°${index + 1}`} //{`${labelNom} n°${index + 1}`}
-                onChange={(e) => handleNomChange(index, e.target.value)}
-              >
-                <MenuItem value="">
+            nomsElements.map((nom, index) => {
+                const listeCapteurs = categoriesSelectionnees[index]
+                    ? (categoriesFiltrees[index] || [])
+                    : capteursDisponibles;
+                    
+                return (
+                    <Box key={`capteur-box-${index}`} sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
+                        
+                        <FormControl fullWidth sx={{ mb: 2 }}>
+                            <InputLabel>Catégorie du capteur n°{index + 1}</InputLabel>
+                            <Select
+                                value={categoriesSelectionnees[index] || ''}
+                                label={`Catégorie du capteur n°${index + 1}`}
+                                onChange={(e) => handleCategorieChange(index, e.target.value)}
+                            >
+                                <MenuItem value="">
+                                    <em>Toutes les catégories</em>
+                                </MenuItem>
+                                {categories.map((item) => (
+                                    <MenuItem key={item.id_categorie} value={item.nom}>
+                                        {item.nom}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
 
-                  <em>Sélectionnez un capteur</em>{/*{labelUniteSing}*/}
-                </MenuItem>
-                {capteursDisponibles.map((item) => {
-                            const isDisabled = nomsElements.includes(item.nom) && nomsElements[index] !== item.nom;
-                            return (
-                              <MenuItem key={item.id} value={item.nom} disabled={isDisabled}>
-                                {item.id} - {item.nom}
-                                
-                </MenuItem>
+                        {listeCapteurs.length === 0 ? (
+                            <Typography color="error" sx={{ textAlign: 'center', py: 2 }}>
+                                Aucun capteur ne correspond à la catégorie "{categoriesSelectionnees[index]}"
+                            </Typography>
+                        ) : (
+                            <FormControl fullWidth required>
+                                <InputLabel>Capteur n°{index + 1}</InputLabel>
+                                <Select
+                                    value={nom}
+                                    label={`Capteur n°${index + 1}`}
+                                    onChange={(e) => handleNomChange(index, e.target.value)}
+                                >
+                                    <MenuItem value="">
+                                        <em>Sélectionnez un capteur</em>
+                                    </MenuItem>
+                                    {listeCapteurs.map((item) => {
+                                        const isDisabled = nomsElements.includes(item.nom) && nomsElements[index] !== item.nom;
+                                        return (
+                                            <MenuItem key={item.id} value={item.nom} disabled={isDisabled}>
+                                                {item.id} - {item.nom}
+                                            </MenuItem>
+                                        );
+                                    })}
+                                </Select>
+                            </FormControl>
+                        )}
+                    </Box>
                 );
-      })}
-      </Select>
-      </FormControl>
-    ))
-    )}
+            })
+        )}
     </>
- )}
+)}
     
                 
   
