@@ -25,38 +25,11 @@ import {
   FormControlLabel
 } from '@mui/material'; //import MUI
 
-/*
- <form onSubmit={handleSubmit}>
-          <Stack spacing={3}> 
-          <TextField
-label="Nombre de capteurs recherchés :"
-         type="number" 
-         value={nbCapteurs}
-         onChange={handleNbCapteursChange}
-         inputProps={{min:1, max:5}} //à xhanger qd on aura le nb de capteurs reliés à la bdd
-        required
-        fullWidth
-        />
-        
-        <FormControl fullWidth>
-        <InputLabel>Type de capteurs</InputLabel>
-        <Select
-          value={category}
-          label="Type de capteurs"
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          <MenuItem value="temperature">Température</MenuItem>
-          <MenuItem value="humidite">Humidité</MenuItem>
-          <MenuItem value="pression">Pression</MenuItem>
-          <MenuItem value="lumiere">Lumière</MenuItem>
-        </Select>
-      </FormControl>
-      */
-
 function Recherche() {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [choixCI, setChoixCI] = useState('capteurs'); // Valeur par défaut
+    const [categories, setCategories] = useState<any[]>([]);
     const [nomsElements, setElementsNames]= useState<string[]>(['']); //tab des noms capteurs init à vide
     const [nombreElements, setNombreElements] = useState<number>(1);
     const [ddate, setDate] = useState('');
@@ -67,29 +40,36 @@ function Recherche() {
  const [loading, setLoading] = useState(true);
 
  //pour selectionner les capteurs correspondant à l'instrument, etc
- const [capteursParInstrument, setCapteursParInstrument] = useState<any[]>([]);
+ const [capteursParInstrument, setCapteursParInstrument] = useState<{ [key: number]: any[] }>({}); //stocke les capteurs par instru
   const [instrumentSelectionne, setInstrumentSelectionne] = useState<string>('');
-  const [capteurSelectionne, setCapteurSelectionne] = useState<string>('');
-
+  const [capteursSelectionnes, setCapteursSelectionnes] = useState<{ [key: number]: string }>({}); //stocke le capteur par instru
+const[categorieSelectionnee, setCategorieSelectionnee] = useState<string>('');
 console.log("test debug avant useEffect");
     // Charger les capteurs depuis la BDD au chargement de la page
   useEffect(() => {
     const fetchData = async () => {
       console.log("début du fetch data");
       try {
-        //const [capteursRes,instrumentsRes]
         const [capteursRes, instrumentsRes] = await Promise.all([fetch('http://localhost:3000/api/capteurs'),fetch('http://localhost:3000/api/instruments')]);
+        
         const capteursData = await capteursRes.json();
         console.log("capteurs reçus");
         setCapteursDisponibles(capteursData || []);
         console.log(`capteursData : ${capteursData}`);
+        
         const instrumentsData = await instrumentsRes.json();
         console.log("instruments reçus");
         setInstrumentsDisponibles(instrumentsData || []); 
         console.log(`instrumentsData : ${instrumentsData}`);
+        
+        const categoriesRes = await fetch('http://localhost:3000/api/categories');
+        const categoriesData = await categoriesRes.json();
+        console.log("Catégories reçues :", categoriesData);
+        setCategories(categoriesData||[]);
+        
         setLoading(false);
       } catch (error) {
-        console.error('Erreur lors du chargement des capteurs:', error);
+        console.error('Erreur lors du chargement des données:', error);
         setLoading(false);
         console.log("fetch fini");
       }
@@ -98,32 +78,8 @@ console.log("test debug avant useEffect");
     fetchData();
   }, []);
 
-  // Fonction pour récupérer les capteurs liés à un instrument
-  const fetchCapteursParInstrument = async (instrumentId: number) => {
-    try {
-      const response = await fetch(`http://localhost:3000/api/capteurs/by-instrument/${instrumentId}`);
-      const data = await response.json();
-      setCapteursParInstrument(data || []);
-    } catch (error) {
-      console.error('Erreur:', error);
-      setCapteursParInstrument([]);
-    }
-  };
-
-  const handleInstrumentChange = (value: string) => {
-    setInstrumentSelectionne(value);
-    setCapteurSelectionne('');
-    
-    // Trouver l'instrument sélectionné
-    const instrument = instrumentsDisponibles.find(i => i.modele === value);
-    if (instrument) {
-      fetchCapteursParInstrument(instrument.id_instrument);
-    }
-  };
-
-
-  // Gestion du nombre d'éléments à sélectionner
-  const handleNombreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+   // Gestion du nb d'éléments à sélectionner
+   const handleNombreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const nb = parseInt(e.target.value) || 1;
     setNombreElements(nb);
     
@@ -139,7 +95,7 @@ console.log("test debug avant useEffect");
       }
     });
   };
-
+  //changement nom capteur
   const handleNomChange = (index: number, value: string) => {
     setElementsNames(prev => {
       const newNoms = [...prev];
@@ -147,6 +103,66 @@ console.log("test debug avant useEffect");
       return newNoms;
     });
   };
+
+  //changement d'instru
+  const handleInstrumentChange = async (index: number, value: string) => {
+    // maj du nom de l'instru
+    setElementsNames(prev => {
+      const newNoms = [...prev];
+      newNoms[index] = value;
+      return newNoms;
+  });
+
+    // Trouver l'instrument sélectionné
+    const instrument = instrumentsDisponibles.find(i => i.modele === value);
+    if (instrument) {
+      try {
+        const response = await fetch(`http://localhost:3000/api/capteurs/by-instrument/${instrument.id_instrument}`);
+        const data = await response.json();
+        setCapteursParInstrument(prev => ({
+            ...prev,
+            [index]: data || []
+        }));
+    } catch (error) {
+        console.error('Erreur:', error);
+        setCapteursParInstrument(prev => ({
+            ...prev,
+            [index]: []
+        }));
+    }
+}
+  }
+//changement capteur sélectionné pr un instru
+const handleCapteurChange = (instrumentIndex: number, capteurNom: string) => {
+  setCapteursSelectionnes(prev => ({
+      ...prev,
+      [instrumentIndex]: capteurNom
+  }));
+};
+  
+//changement catégorie
+const handleCategorieChange = async (index: number, value: string) => {
+  setCategorieSelectionnee(value);
+}
+
+  
+
+
+
+  // Fonction pour récupérer les capteurs liés à un instrument
+  const fetchCapteursParInstrument = async (instrumentId: number) => {
+    try {
+      const response = await fetch(`http://localhost:3000/api/capteurs/by-instrument/${instrumentId}`);
+      const data = await response.json();
+      setCapteursParInstrument(data || []);
+    } catch (error) {
+      console.error('Erreur:', error);
+      setCapteursParInstrument([]);
+    }
+  };
+
+
+
   
   // Réinitialisation du formulaire
   const resetForm = () => {
@@ -155,8 +171,8 @@ console.log("test debug avant useEffect");
     setNombreElements(1);
     setDate('');
     setInstrumentSelectionne('');
-    setCapteurSelectionne('');
-    setCapteursParInstrument([]);
+    setCapteursSelectionnes({});
+    setCapteursParInstrument({});
   };
 
   //Données à afficher selon le choix
@@ -169,10 +185,14 @@ console.log("test debug avant useEffect");
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault(); // empêche le rechargement de la page
-        let nomsRecherche = nomsElements.filter(nom => nom.trim());
-        // mode instruments et sélectionné un capteur
-        if (choixCI === 'instruments' && capteurSelectionne) {
-          nomsRecherche = [capteurSelectionne];
+        let nomsRecherche : string[] = [];
+        // mode capteur 
+        if (choixCI === 'capteurs') {
+          nomsRecherche = nomsElements.filter(nom => nom.trim());
+        }
+        else {
+          //mode instrument, on recupere les capteurs séléctionnés
+          nomsRecherche = Object.values(capteursSelectionnes).filter(c => c);
         }
         if (nomsRecherche.length === 0) {
           alert(`Veuillez sélectionner au moins un ${choixCI === 'capteurs' ? 'capteur' : 'instrument'}`);
@@ -222,20 +242,28 @@ console.log("test debug avant useEffect");
           <form onSubmit={handleSubmit}>
             <Stack spacing={3}>
 
+            
+          
+
               <FormControl component="fieldset">
               <RadioGroup
               row
               value={choixCI}
-              onChange={(e)=>{setChoixCI(e.target.value); setElementsNames(['']); setNombreElements(1); setInstrumentSelectionne('');
-              setCapteurSelectionne('');
-              setCapteursParInstrument([]);}}
+              onChange={(e)=>{
+                setChoixCI(e.target.value);
+                setElementsNames(['']);
+                setNombreElements(1);
+                setCapteursParInstrument({});
+                setCapteursSelectionnes({});
+            }}
               >
+              <FormControlLabel value="instruments" control={<Radio />} label="Instrument(s) de mesure" />
               <FormControlLabel value="capteurs" control={<Radio />} label="Capteur(s)" />
-                  <FormControlLabel value="instruments" control={<Radio />} label="Instrument(s) de mesure" />
                 </RadioGroup>
               </FormControl>
 
 
+            
 
 
  {/*mode CAPTEURS */}
@@ -250,11 +278,16 @@ console.log("test debug avant useEffect");
                     required
                     fullWidth
                   />
+                          
+        
+                    
 
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
         <CircularProgress />
       </Box>
+      ) : capteursDisponibles.length === 0 ? (
+        <Typography color="error">Aucun capteur trouvé</Typography>
         ) : (
           nomsElements.map((nom, index) => (
             <FormControl key={`${choixCI}-${index}`} fullWidth required>
@@ -272,8 +305,9 @@ console.log("test debug avant useEffect");
                 {capteursDisponibles.map((item) => {
                             const isDisabled = nomsElements.includes(item.nom) && nomsElements[index] !== item.nom;
                             return (
-                              <MenuItem key={item.Id} value={item.nom} disabled={isDisabled}>
-                                {item.nom} - {item.Localisation || ''}
+                              <MenuItem key={item.id} value={item.nom} disabled={isDisabled}>
+                                {item.id} - {item.nom}
+                                
                 </MenuItem>
                 );
       })}
@@ -298,9 +332,35 @@ console.log("test debug avant useEffect");
                     required
                     fullWidth
                   />
+            {loading ? (
+            <CircularProgress />
+        ) : instrumentsDisponibles.length === 0 ? (
+            <Typography color="error">Aucun instrument trouvé</Typography>
+            ) : (
+              <>
+                  {/* Sélection de catégorie */}
+                  <FormControl fullWidth>
+                      <InputLabel>Filtrer par catégorie</InputLabel>
+                      <Select
+                          value={categorieSelectionnee}
+                          label="Filtrer par catégorie"
+                          onChange={(e) => setCategorieSelectionnee(e.target.value)}
+                      >
+                          <MenuItem value="">
+                              <em>Toutes les catégories</em>
+                          </MenuItem>
+                          {categories.map((item) => (
+                              <MenuItem key={item.id_categorie} value={item.nom}>
+                                  {item.nom}
+                              </MenuItem>
+                          ))}
+                      </Select>
+                  </FormControl>
+
 
                 {nomsElements.map((selectedInstrument, index) => (
-                <FormControl key={`instrument-${index}`} fullWidth required>
+                <Box key={`instrument-box-${index}`} sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
+                  <FormControl fullWidth required>
                     <InputLabel>Sélectionnez un instrument</InputLabel>
                     <Select
                       value={selectedInstrument}
@@ -308,7 +368,7 @@ console.log("test debug avant useEffect");
                       onChange={(e) => {
                         const nValue = e.target.value;
                         handleNomChange(index, nValue);
-                        handleInstrumentChange(nValue);
+                        handleInstrumentChange(index, nValue);
                       }}
                     >
                       <MenuItem value="">
@@ -316,37 +376,44 @@ console.log("test debug avant useEffect");
                       </MenuItem>
                       {instrumentsDisponibles.map((item) => (
                         <MenuItem key={item.id_instrument} value={item.modele}>
-                          {item.modele} - {item.num_instrument || ''}
+                          {item.id_instrument} - {item.modele}
                         </MenuItem>
                       
                       ))}
                     </Select>
                   </FormControl>
-                  ))}
+                  {/*Affichage des capteurs liés à l'instrument*/}
 
-             
-{/*Affichage des capteurs liés à l'instrument*/}
-{capteursParInstrument.length > 0 && (
+{/*verifier l'existence puis la longueur*/}
+{capteursParInstrument[index] && capteursParInstrument[index].length > 0 && (
   <FormControl component="fieldset">
     <FormLabel component="legend">Capteurs associés à cet instrument :</FormLabel>
     <MuiRadioGroup
-      value={capteurSelectionne}
-      onChange={(e) => setCapteurSelectionne(e.target.value)}
+      value={capteursSelectionnes[index]|| ''}
+      onChange={(e) => handleCapteurChange(index, e.target.value)}
     >
-      {capteursParInstrument.map((capteur) => (
+      {capteursParInstrument[index].map((capteur) => (
         <FormControlLabel
-          key={capteur.Id}
+          key={capteur.id}
           value={capteur.nom}
           control={<Radio />}
-          label={`${capteur.nom} - ${capteur.Localisation || ''}`}
+          label={`${capteur.id} - ${capteur.nom}`}
         />
       ))}
     </MuiRadioGroup>
   </FormControl>
 )}
-</>
+                
+                </Box>
+            ))}
+        
+    </>
 )}
-      
+</>
+   )}
+             
+
+    
 
 
         
@@ -389,8 +456,10 @@ console.log("test debug avant useEffect");
            </Paper>
            </Container>
            </Box>
-
     );
 
+    
 }
+
+
 export default Recherche;

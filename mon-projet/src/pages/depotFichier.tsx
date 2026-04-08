@@ -139,11 +139,11 @@ function DepotFichier(){
                 <form onSubmit={handleSubmit}>
                     <Stack spacing={3}>
                         <FormControl fullWidth required>
-                        <InputLabel>Sélectionnez l-instrument pour lequel vous depossez un fichier</InputLabel>
+                        <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
                         <Select
                         value={selectedInstrument}
                         onChange={handleInstrumentChange}
-                        label="Sélectionnez l'instrument pour lequel vous déposez un fichier">
+                        label="Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier">
                         
                         {/* Estos menu Items son temporales despues hay que load los de la BDD */}
                         <MenuItem value="instrument1">Instrument 1</MenuItem>
@@ -155,11 +155,11 @@ function DepotFichier(){
 
 
                         <FormControl fullWidth required>
-                        <InputLabel>Sélectionnez le capteur pour lequel vous depossez un fichier</InputLabel>
+                        <InputLabel>Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier</InputLabel>
                         <Select
                         value={selectedCapteur}
                         onChange={handleCapteurChange}
-                        label="Sélectionnez le capteur pour lequel vous déposez un fichier">
+                        label="Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier">
 
                         <MenuItem value="capteur1">Capteur 1</MenuItem>
                         <MenuItem value="capteur2">Capteur 2</MenuItem>
