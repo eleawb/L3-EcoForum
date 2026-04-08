@@ -11,7 +11,7 @@ app.use(express.json());
 const client = new Client({
     host: "localhost",
     user: "eleaweber",
-    port: 5432,
+    port: 5431,
     password: "post",
     //database: "testEcoforum_db"
     database: "EcoForum"
