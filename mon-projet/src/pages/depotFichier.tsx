@@ -221,18 +221,18 @@ function DepotFichier(){
                     placeholder="Entrez votre nom"
                   />
                   <TextField
-                    label="Numero de serie"
+                    label="Numéro de série"
                     variant="outlined"
                     fullWidth
                     required
                     value={numSerie}
                     onChange={(e) => setnumSerie(e.target.value)}
-                    placeholder="Entrez le numero de serie"
+                    placeholder="Entrez le numéro de série"
                   />
                   
                   <Stack direction="row" spacing={2} alignItems="center">
                     <TextField
-                      label="Format(extension)"
+                      label="Format (extension)"
                       variant="outlined"
                       fullWidth
                       required
