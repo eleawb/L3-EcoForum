@@ -70,7 +70,7 @@ return(
                 <form onSubmit={handleSubmit}>
                     <Stack spacing={3}>
                         <FormControl fullWidth required>
-                        <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez compléter un fichier</InputLabel>
+                        <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
                         <Select
                         value={selectedInstrument}
                         onChange={handleInstrumentChange}
@@ -112,8 +112,9 @@ return(
                         py:1.5,
                         '&:hover': {bgcolor: !isFormComplete ? '#CCCCCC' : '#C78023',}, //qd on passe dessus
                         }}
-                    >AJOUTER DES LIGNES
-                    {!isFormComplete ? 'Sélectionnez d\'abord instrument et capteur' : 'Parcourir pour sélectionner un fichier'}
+                    >AJOUTER DES LIGNES 
+                    
+                    {!isFormComplete ? ' Sélectionnez d\'abord instrument et capteur' : 'Parcourir pour sélectionner un fichier'}
                     </Button>
                     </Stack>
                </form>         

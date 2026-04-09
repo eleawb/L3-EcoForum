@@ -230,7 +230,7 @@ function DepotFichier(){
                     '&:hover': { bgcolor: '#C78023' },
                   }}
                 >
-                  SELECTION DE FICHIER
+                  SÉLECTION DE FICHIER
                 </Button>
                 
                 {selectedFile && (
