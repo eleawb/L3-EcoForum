@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'; 
 import { useNavigate } from 'react-router-dom'; //pr navigation
 import { Search as SearchIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { TimepickerUI } from "timepicker-ui"; //choix heure
+import "timepicker-ui/main.css";
 import {
   Radio,
   RadioGroup,
@@ -32,7 +34,7 @@ function Recherche() {
     const [categories, setCategories] = useState<any[]>([]);
     const [nomsElements, setElementsNames]= useState<string[]>(['']); //tab des noms capteurs init à vide
     const [nombreElements, setNombreElements] = useState<number>(1);
-    const [ddate, setDate] = useState('');
+    
 
  // États pour les capteurs et instruments de la BDD
  const [capteursDisponibles, setCapteursDisponibles] = useState<any[]>([]);
@@ -50,6 +52,24 @@ const [capteursFiltres, setCapteursFiltres] = useState<any[]>([]); //filtre de c
 const [categoriesSelectionnees, setCategoriesSelectionnees] = useState<{ [key: number]: string }>({});
 const [categoriesFiltrees, setCategoriesFiltrees] = useState<{ [key: number]: any[] }>({});
 const [instrumentsFiltres, setInstrumentsFiltres] = useState<{[key:number]: any[] }>({});
+
+//methode de datation
+const [choixDate, setChoixDate] = useState(''); // Valeur par défaut
+//dates journalières pr le filtre
+const [jourdeb, setJourDeb] = useState('');
+const [jourfin, setJourFin] = useState('');
+//heures pr le filtre
+const [heuredeb, setHeureDeb] = useState('');
+const [heurefin, setHeureFin] = useState('');
+//dates hebdomadaires pr le filtre
+const [semainedeb, setSemaineDeb] = useState('');
+const [semainefin, setSemaineFin] = useState('');
+//dates mensuelles pr le filtre
+const [moisdeb, setMoisDeb] = useState('');
+const [moisfin, setMoisFin] = useState('');
+//dates annuelles pr le filtre
+const [anneedeb, setAnneeDeb] = useState('');
+const [anneefin, setAnneeFin] = useState('');
 
 console.log("test debug avant useEffect");
     // Charger les capteurs depuis la BDD au chargement de la page
@@ -331,7 +351,12 @@ const handleCategorieChangeInstrument = async (index: number, value: string) => 
     setSearchTerm('');
     setElementsNames(['']); //on vide tout
     setNombreElements(1);
-    setDate('');
+    setJourDeb('');
+    setJourFin('');
+    setHeureDeb('');
+    setHeureFin('');
+    setSemaineDeb('');
+    setSemaineFin('');
     setInstrumentSelectionne('');
     setCapteursSelectionnes({});
     setCapteursParInstrument({});
@@ -367,7 +392,7 @@ const handleCategorieChangeInstrument = async (index: number, value: string) => 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nomsCapteurs: nomsRecherche,
-          date: ddate,
+          date: jourdeb,
           searchTerm
         })
       });
@@ -406,7 +431,8 @@ const handleCategorieChangeInstrument = async (index: number, value: string) => 
 
             
           
-
+            <Box key={`choixCI-box`} sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
+            <InputLabel>Veuillez choisir un type d'appareil :</InputLabel>
               <FormControl component="fieldset">
               <RadioGroup
               row
@@ -425,7 +451,7 @@ const handleCategorieChangeInstrument = async (index: number, value: string) => 
               <FormControlLabel value="capteurs" control={<Radio />} label="Capteur(s)" />
                 </RadioGroup>
               </FormControl>
-
+              </Box>
 
             
 
@@ -440,6 +466,7 @@ const handleCategorieChangeInstrument = async (index: number, value: string) => 
             value={nombreElements}
             onChange={handleNombreChange}
             inputProps={{ min: 1, max: 10 }}
+            style= {{width: '32%'}}
             required
             fullWidth
         />
@@ -453,8 +480,9 @@ const handleCategorieChangeInstrument = async (index: number, value: string) => 
                     : capteursDisponibles;
                     
                 return (
-                    <Box key={`capteur-box-${index}`} sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
-                        
+                    <Box key={`capteur-box-${index}`}  sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2}}>
+                                  
+
                         <FormControl fullWidth sx={{ mb: 2 }}>
                             <InputLabel>Filtrer par catégorie</InputLabel>
                             <Select
@@ -631,14 +659,163 @@ const handleCategorieChangeInstrument = async (index: number, value: string) => 
             required
           />
       */}
-    <InputLabel>Veuillez choisir une date :</InputLabel>
-        <input 
-            type="date"
-            id="ddate"
-            required
-            value={ddate}
-            onChange={(e) => setDate(e.target.value)}
-          />
+      
+      <Box key={`date-box`} sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2}}>
+
+    <InputLabel>Veuillez choisir une méthode de datation :</InputLabel>
+        
+          
+
+    <FormControl component="fieldset">
+              <RadioGroup
+              row
+              value={choixDate}
+              
+              onChange={(e)=>{
+                setChoixDate(e.target.value);
+                
+                
+            }}
+              >
+              <FormControlLabel value="Heure" control={<Radio />} label="Heure" />
+              <FormControlLabel value="Jour" control={<Radio />} label="Jour" />
+              <FormControlLabel value="Semaine" control={<Radio />} label="Semaine" />
+              <FormControlLabel value="Mois" control={<Radio />} label="Mois" />
+              <FormControlLabel value="Année" control={<Radio />} label="Année" />
+
+                </RadioGroup>
+              </FormControl>
+          </Box>
+
+
+          {/*choix HEURE*/}
+
+        {choixDate === 'Heure' && (
+              <Box sx={{ mt: 2 }}>
+                <InputLabel>Choisissez une heure de début et une heure de fin:</InputLabel>
+                <Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+                <input 
+                  type="time"
+                  id="heuredeb"
+                  value={heuredeb}
+                onChange={(e) => setHeureDeb(e.target.value)}
+                style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '20%' }}
+                />
+               
+            <input 
+                type="time"
+                id="heurefin"
+                value={heurefin}
+                onChange={(e) => setHeureFin(e.target.value)}
+                style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '20%' }}
+            />
+        </Stack>
+    </Box>
+)}
+            {/*choix JOUR*/}
+            {choixDate === 'Jour' && (
+              <Box sx={{ mt: 2 }}>
+                <InputLabel>Choisissez une date de début et une date de fin:</InputLabel>
+                <input 
+                  type="date"
+                  id="jourdeb"
+                  required
+                  value={jourdeb}
+                  onChange={(e) => setJourDeb(e.target.value)}
+                  style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '20%' }}
+                />
+
+<input 
+                  type="date"
+                  id="jourfin"
+                  required
+                  value={jourfin}
+                  onChange={(e) => setJourFin(e.target.value)}
+                  style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '20%' }}
+                />
+        </Box> //AJOUTER UN AUTOFILL DU LENDEMAIN
+        
+            )}
+
+
+            {/*choix SEMAINE*/}
+            {choixDate === 'Semaine' && (
+              <Box sx={{ mt: 2 }}>
+                <InputLabel>Choisissez une date de début et une date de fin:</InputLabel>
+                <input 
+                  type="date"
+                  id="semainedeb"
+                  required
+                  value={semainedeb}
+                  onChange={(e) => setSemaineDeb(e.target.value)}
+                  style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '20%' }}
+                />
+
+<input 
+                  type="date"
+                  id="semainefin"
+                  required
+                  value={semainefin}
+                  onChange={(e) => setSemaineFin(e.target.value)}
+                  style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '20%' }}
+                /> 
+        </Box> //AJOUTER UN AUTOFILL 7 JOURS PILE APRES
+        
+            )}
+
+
+            {/*choix MOIS*/}
+            {choixDate === 'Mois' && (
+              <Box sx={{ mt: 2 }}>
+                <InputLabel>Choisissez une date de début et une date de fin:</InputLabel>
+                <input 
+                  type="date"
+                  id="moisdeb"
+                  required
+                  value={moisdeb}
+                  onChange={(e) => setMoisDeb(e.target.value)}
+                  style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '20%' }}
+                />
+
+<input 
+                  type="date"
+                  id="moisfin"
+                  required
+                  value={moisfin}
+                  onChange={(e) => setMoisFin(e.target.value)}
+                  style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '20%' }}
+                /> 
+        </Box> //AJOUTER UN AUTOFILL 1 MOIS PILE APRES
+        
+            )}
+
+ {/*choix ANNÉE*/}
+ {choixDate === 'Année' && (
+              <Box sx={{ mt: 2 }}>
+                <InputLabel>Choisissez une date de début et une date de fin:</InputLabel>
+                <input 
+                  type="date"
+                  id="anneedeb"
+                  required
+                  value={anneedeb}
+                  onChange={(e) => setAnneeDeb(e.target.value)}
+                  style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '20%' }}
+                />
+
+<input 
+                  type="date"
+                  id="anneefin"
+                  required
+                  value={anneefin}
+                  onChange={(e) => setAnneeFin(e.target.value)}
+                  style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '20%' }}
+                /> 
+        </Box> //AJOUTER UN AUTOFILL 1 AN PILE APRES
+        
+            )}
+            
+
+
 
           <Stack direction="row" spacing={2} justifyContent="center">
      
@@ -659,9 +836,7 @@ const handleCategorieChangeInstrument = async (index: number, value: string) => 
            </Paper>
            </Container>
            </Box>
-    );
-
-    
+    );   
 }
 
 
