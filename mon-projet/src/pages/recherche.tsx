@@ -49,7 +49,7 @@ const[categorieSelectionnee, setCategorieSelectionnee] = useState<string>('');
 const [capteursFiltres, setCapteursFiltres] = useState<any[]>([]); //filtre de catégorie
 const [categoriesSelectionnees, setCategoriesSelectionnees] = useState<{ [key: number]: string }>({});
 const [categoriesFiltrees, setCategoriesFiltrees] = useState<{ [key: number]: any[] }>({});
-
+const [instrumentsFiltres, setInstrumentsFiltres] = useState<{[key:number]: any[] }>({});
 
 console.log("test debug avant useEffect");
     // Charger les capteurs depuis la BDD au chargement de la page
@@ -238,7 +238,7 @@ const filtrerCapteursParCategorie = async (categorieNom: string) => {
   }
 };
 
-//changement catégorie
+//changement catégorie pr capteurs
 const handleCategorieChange = async (index: number, value: string) => {
   setCategoriesSelectionnees(prev => ({
       ...prev,
@@ -282,7 +282,48 @@ const handleCategorieChange = async (index: number, value: string) => {
 };
 
 
-
+//changement catégorie pr instruments
+const handleCategorieChangeInstrument = async (index: number, value: string) => {
+  setCategoriesSelectionnees(prev => ({
+      ...prev,
+      [index]: value
+  }));
+  
+  if (!value) {
+      setInstrumentsFiltres(prev => ({
+          ...prev,
+          [index]: instrumentsDisponibles
+      }));
+      return;
+  }
+  try {
+    const response = await fetch('http://localhost:3000/api/instruments/by-categorie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categorie: value })
+    });
+    
+    if (response.ok) {
+        const data = await response.json();
+        setInstrumentsFiltres(prev => ({
+            ...prev,
+            [index]: data
+        }));
+    } else {
+        setInstrumentsFiltres(prev => ({
+            ...prev,
+            [index]: []
+        }));
+    }
+} catch (error) {
+    console.error('Erreur:', error);
+    setInstrumentsFiltres(prev => ({
+        ...prev,
+        [index]: []
+    }));
+}
+};
+  
 
   
   // Réinitialisation du formulaire
@@ -415,7 +456,7 @@ const handleCategorieChange = async (index: number, value: string) => {
                     <Box key={`capteur-box-${index}`} sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
                         
                         <FormControl fullWidth sx={{ mb: 2 }}>
-                            <InputLabel>Catégorie du capteur n°{index + 1}</InputLabel>
+                            <InputLabel>Filtrer par catégorie</InputLabel>
                             <Select
                                 value={categoriesSelectionnees[index] || ''}
                                 label={`Catégorie du capteur n°${index + 1}`}
@@ -484,14 +525,24 @@ const handleCategorieChange = async (index: number, value: string) => {
         ) : instrumentsDisponibles.length === 0 ? (
             <Typography color="error">Aucun instrument trouvé</Typography>
             ) : (
-              <>
+              //liste instruments qui ont des capteurs appartenant a categorie
+              nomsElements.map((selectedInstrument, index) => {
+                const listeInstruments = categoriesSelectionnees[index]
+                    ? (instrumentsFiltres[index] || [])
+                    : instrumentsDisponibles;
+                //recup les capteurs associés aux instruments sélectionnés
+                const capteursAssocies = capteursParInstrument[index] || [];
+
+                return (
+                    <Box key={`instrument-box-${index}`} sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
+                        
                   {/* Sélection de catégorie */}
-                  <FormControl fullWidth>
+                  <FormControl fullWidth sx={{mb:2}}>
                       <InputLabel>Filtrer par catégorie</InputLabel>
                       <Select
-                          value={categorieSelectionnee}
-                          label="Filtrer par catégorie"
-                          onChange={(e) => setCategorieSelectionnee(e.target.value)}
+                          value={categoriesSelectionnees[index]|| ''}
+                          label={`Catégorie de l'instrument n°${index + 1}`}
+                          onChange={(e) => handleCategorieChangeInstrument(index, e.target.value)}
                       >
                           <MenuItem value="">
                               <em>Toutes les catégories</em>
@@ -503,10 +554,13 @@ const handleCategorieChange = async (index: number, value: string) => {
                           ))}
                       </Select>
                   </FormControl>
+                  {listeInstruments.length === 0 ? (
+                            <Typography color="error" sx={{ textAlign: 'center', py: 2 }}>
+                                Aucun capteur d'instrument ne correspond à la catégorie "{categoriesSelectionnees[index]}"
+                            </Typography>
+                        ) : (
 
-
-                {nomsElements.map((selectedInstrument, index) => (
-                <Box key={`instrument-box-${index}`} sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
+                
                   <FormControl fullWidth required>
                     <InputLabel>Sélectionnez un instrument</InputLabel>
                     <Select
@@ -521,7 +575,7 @@ const handleCategorieChange = async (index: number, value: string) => {
                       <MenuItem value="">
                         <em>Sélectionnez un instrument</em>
                       </MenuItem>
-                      {instrumentsDisponibles.map((item) => (
+                      {listeInstruments.map((item) => (
                         <MenuItem key={item.id_instrument} value={item.modele}>
                           {item.id_instrument} - {item.modele}
                         </MenuItem>
@@ -529,17 +583,19 @@ const handleCategorieChange = async (index: number, value: string) => {
                       ))}
                     </Select>
                   </FormControl>
-                  {/*Affichage des capteurs liés à l'instrument*/}
-
+                  )}
+                  
+                {/*Affichage des capteurs liés à l'instrument*/}
+                      
 {/*verifier l'existence puis la longueur*/}
-{capteursParInstrument[index] && capteursParInstrument[index].length > 0 && (
-  <FormControl component="fieldset">
+{selectedInstrument && capteursAssocies.length > 0 && (
+  <FormControl component="fieldset" sx={{mt:2}}>
     <FormLabel component="legend">Capteurs associés à cet instrument :</FormLabel>
     <MuiRadioGroup
       value={capteursSelectionnes[index]|| ''}
       onChange={(e) => handleCapteurChange(index, e.target.value)}
     >
-      {capteursParInstrument[index].map((capteur) => (
+      {capteursAssocies.map((capteur) => (
         <FormControlLabel
           key={capteur.id}
           value={capteur.nom}
@@ -552,12 +608,12 @@ const handleCategorieChange = async (index: number, value: string) => {
 )}
                 
                 </Box>
-            ))}
-        
-    </>
-)}
+            );
+      })
+   
+  )}
 </>
-   )}
+ )}
              
 
     
