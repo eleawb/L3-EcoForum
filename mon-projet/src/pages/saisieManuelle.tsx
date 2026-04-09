@@ -18,6 +18,7 @@ import {
   Select,
   MenuItem
 } from '@mui/material'; //import MUI
+import { SelectChangeEvent } from '@mui/material/Select';
 
 function SaisieManuelle(){
 const navigate = useNavigate();

@@ -18,6 +18,7 @@ import {
   Select,
   MenuItem
 } from '@mui/material'; //import MUI
+import { SelectChangeEvent } from '@mui/material/Select';
 
 function DepotFichier(){
     const navigate = useNavigate();
@@ -128,7 +129,7 @@ function DepotFichier(){
     console.log('Instrument:', selectedInstrument);
     console.log('Capteur:', selectedCapteur);
     console.log('Nom:', nom);
-    console.log('Numero de serie:', numSerie);
+    console.log('Numéro de série:', numSerie);
     console.log('Extension:', extension);
     console.log('Date import:', dateImport);
     console.log('Type source:', typeSource);
@@ -154,8 +155,33 @@ function DepotFichier(){
                 <Typography variant ='h4' gutterBottom align ="center">AJOUT</Typography>
 
                 <form onSubmit={handleSubmit}>
-                    <Stack spacing={3}>
-                        <FormControl fullWidth required>
+
+                <Stack spacing={3}>
+                      <Button
+                        type="button"
+                        variant="contained"
+                        onClick={handleFileUpload}
+                        //disabled={!isFormComplete}
+                        sx={{
+                          bgcolor: '#EC9706',
+                        //bgcolor: !isFormComplete ? '#CCCCCC' : '#EC9706',
+                        //color: !isFormComplete ? '#666666' : '#FFFFFF',
+                        '&:hover': {
+                            bgcolor: !isFormComplete ? '#CCCCCC' : '#C78023',},
+                        }}
+                        >SELECTION DE FICHIER
+                        </Button>
+                        {selectedFile && (
+                    <Typography variant="body2" sx={{ color: 'green', textAlign: 'center' }}>
+                      Fichier sélectionné: {selectedFile.name}
+                    </Typography>
+                  )}
+
+
+
+                {showAdditionalInputs && (
+                <>
+                <FormControl fullWidth required>
                         <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
                         <Select
                         value={selectedInstrument}
@@ -174,14 +200,14 @@ function DepotFichier(){
                         <FormControl fullWidth required>
                         <InputLabel>Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier</InputLabel>
                         <Select
-                        value={selectedCapteur}
-                        onChange={handleCapteurChange}
-                        label="Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier">
-
-                        <MenuItem value="capteur1">Capteur 1</MenuItem>
-                        <MenuItem value="capteur2">Capteur 2</MenuItem>
-                        <MenuItem value="capteur3">Capteur 3</MenuItem>
-
+                          value={selectedCapteur}
+                          onChange={handleCapteurChange}
+                          label="Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier"
+                        >
+                          <MenuItem value="capteur1">KUNAK</MenuItem>
+                          <MenuItem value="capteur2">HOBO</MenuItem>
+                          <MenuItem value="capteur3">Station Meteo</MenuItem>
+                          <MenuItem value="capteur4">TSM4</MenuItem> {/* Fixed duplicate value */}
                         </Select>
                       </FormControl>
                         
@@ -263,8 +289,8 @@ function DepotFichier(){
                       <MenuItem value="image">Image</MenuItem>
                     </Select>
                   </FormControl>
-                
-              
+                </>
+              )}
               
               <Button
                 type="submit"

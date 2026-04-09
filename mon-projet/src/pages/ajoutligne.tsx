@@ -32,7 +32,7 @@ function AjoutLigne(){
       >
 
     <Toolbar>
-                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>SAISISE</Typography>
+                    <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>SAISIE</Typography>
                     <Button color="inherit" onClick={() => navigate('/')}>Retour</Button>
                 </Toolbar>
             </AppBar>
