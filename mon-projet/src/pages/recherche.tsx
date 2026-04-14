@@ -7,6 +7,7 @@ import {
   Autocomplete,
   TextField,
   Select,
+  Switch,
   RadioGroup,
   AppBar,
   Toolbar,
@@ -16,6 +17,7 @@ import {
   Box,
   Paper,
   Stack,
+  Divider,
   FormControl,
   FormLabel,
   InputLabel,
@@ -36,8 +38,11 @@ function Recherche() {
     const [chargement, setChargement] = useState(true)
     const [selectTout, setSelectTout] = useState(false)
 
+    const [filtreActif, setFiltreActif] = useState(false) //faire apparaitre ou pas le filtre catégorie
     const [categoriesSelectionnees, setCategoriesSelectionnees] = useState<string[]>([]) 
     const [instrumentsFiltres, setInstrumentsFiltres] = useState<any[]>([])
+    const [messageErreur, setMessageErreur] = useState('') //pr recup le nom des catégories choisies
+
 
     // Méthode de datation
     const [choixDate, setChoixDate] = useState('')
@@ -109,6 +114,8 @@ function Recherche() {
   
       if (values.length === 0) {
           setInstrumentsFiltres(instrumentsDisponibles)
+          setMessageErreur('')
+
           return
       }
 
@@ -134,14 +141,32 @@ function Recherche() {
           if (response.ok) {
               const data = await response.json()
               setInstrumentsFiltres(data)
+              if (data.length === 0) {
+                // Construire le message d'erreur avec les noms des catégories
+                const message = nomsCategories.length > 1 
+                    ? `Aucun instrument ne correspond aux catégories "${nomsCategories.join(', ')}"`
+                    : `Aucun instrument ne correspond à la catégorie "${nomsCategories[0]}"`
+                setMessageErreur(message)
+            } else {
+                setMessageErreur('')
+            }
           } else {
               setInstrumentsFiltres([])
-          }
+              const message = nomsCategories.length > 1 
+                ? `Aucun instrument ne correspond aux catégories "${nomsCategories.join(', ')}"`
+                : `Aucun instrument ne correspond à la catégorie "${nomsCategories[0]}"`
+            setMessageErreur(message)
+        }
+          
       } catch (error) {
           console.error('Erreur:', error)
           setInstrumentsFiltres([])
-      }
+          const message = nomsCategories.length > 1 
+          ? `Aucun instrument ne correspond aux catégories "${nomsCategories.join(', ')}"`
+          : `Aucun instrument ne correspond à la catégorie "${nomsCategories[0]}"`
+      setMessageErreur(message)
   }
+}
     
 
  // Gestion de la sélection d'un instrument
@@ -261,6 +286,7 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                               )
                           }
                           CategorieChangePourInstrument(newValues)
+                          setCategoriesSelectionnees(newValues)
                       }}
                       size="small"
                   />
@@ -280,6 +306,7 @@ const renderCategoryTree = (categorie: any, depth: number) => {
       </Box>
   )
 }
+
 
     const boutonSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -334,47 +361,79 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                               <Typography color="error">Erreur de chargement des catégories</Typography>
                             ) : (
                               <>
-                                    {/* Filtre par catégorie avec arborescence et checkboxes */}
-                                    <FormControl component="fieldset" sx={{ mb: 2 }}>
-                                        <FormLabel component="legend">Filtrer par catégorie</FormLabel>
-                                        <Box sx={{ 
-                                            maxHeight: 300, 
-                                            overflow: 'auto', 
-                                            border: '1px solid #ccc', 
-                                            borderRadius: 1, 
-                                            p: 1,
-                                            bgcolor: '#fafafa'
-                                        }}>
-                                            {categories
-                                                .filter(cat => !cat.id_parent) // Catégories racines
-                                                .map((rootCat) => renderCategoryTree(rootCat, 0))}
-                                        </Box>
-                                    </FormControl>
+                              {/* Filtre par catégorie */}
+                              <Box sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.2 }}>
+                                      <Typography variant="subtitle1" sx={{ color: '#666', mb: 1, display: 'block' }}>
+                                          Filtrer par catégorie
+                                      </Typography>
+                                      <FormControlLabel
+                                          control={
+                                              <Switch
+                                                  checked={filtreActif}
+                                                  onChange={(e) => {
+                                                      setFiltreActif(e.target.checked)
+                                                      if (e.target.checked && categoriesSelectionnees.length > 0) {
+                                                          CategorieChangePourInstrument(categoriesSelectionnees)
+                                                      } else {
+                                                          setInstrumentsFiltres(instrumentsDisponibles)
+                                                      }
+                                                  }}
+                                                  color="primary"
+                                                  sx={{
+                                                      '& .MuiSwitch-switchBase.Mui-checked': {
+                                                          color: '#0370B2',
+                                                      },
+                                                      '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                                          backgroundColor: '#0370B2',
+                                                      },
+                                                  }}
+                                              />
+                                          }
+                                          label={filtreActif ? "Actif" : "Inactif"}
+                                          labelPlacement="start"
+                                          sx={{ 
+                                              '& .MuiFormControlLabel-label': { 
+                                                  fontSize: '0.875rem',
+                                                  color: filtreActif ? '#0370B2' : '#666'
+                                              }
+                                          }}
+                                      />
+                                  </Box>
 
+                                        {filtreActif && (
+                                            <>
+                                                <Divider sx={{ my: 1 }} />
+                                                <Typography variant="caption" sx={{ color: '#666', mb: 1, display: 'block' }}>
+                                                    Sélectionnez les catégories souhaitées :
+                                                </Typography>
+                                                <Box sx={{ 
+                                                    maxHeight: 250, 
+                                                    overflow: 'auto', 
+                                                    border: '1px solid #e0e0e0', 
+                                                    borderRadius: 1, 
+                                                    p: 1.5,
+                                                    bgcolor: '#fafafa'
+                                                }}>
+                                                    {categories
+                                                        .filter(cat => !cat.id_parent)
+                                                        .map((rootCat) => renderCategoryTree(rootCat, 0))}
+                                                </Box>
+                                            </>
+                                        )}
+                                    </Box>
+                                    
                                     {listeInstruments.length === 0 ? (
-                                      categoriesSelectionnees.length === 0 ? (
+                                      messageErreur ? (
                                         <Typography color="error" sx={{ textAlign: 'center', py: 2 }}>
-                                        Aucun instrument trouvé
+                                            {messageErreur}
                                         </Typography>
-                                      ) : (
-                                        (() => {
-                                            // Convertir les IDs en noms pour l'affichage
-                                            const nomsCategories = categoriesSelectionnees.map(id => {
-                                                const cat = categories.find(c => c.id_categorie === id)
-                                                return cat?.nom
-                                            }).filter(Boolean)
-                                            
-                                            return nomsCategories.length > 1 ? (
-                                                <Typography color="error" sx={{ textAlign: 'center', py: 2 }}>
-                                                    Aucun instrument ne correspond aux catégories "{nomsCategories.join(', ')}"
-                                                </Typography>
-                                            ) : (
-                                                <Typography color="error" sx={{ textAlign: 'center', py: 2 }}>
-                                                    Aucun instrument ne correspond à la catégorie "{nomsCategories[0]}"
-                                                </Typography>
-                                            )
-                                        })()
-                                    )
+                                    ) : categoriesSelectionnees.length === 0 ? (
+                                        <Typography color="error" sx={{ textAlign: 'center', py: 2 }}>
+                                            Aucun instrument trouvé
+                                        </Typography>
+                                    ) : null
+                                    
                                     ) : (
                                     
                                    /* Sélection de l'instrument */
@@ -424,9 +483,11 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                                         </Box>
                                     </FormControl>
                                 
+                                  )}
+                              </>
                             )}
-                            </>
-                            )}
+                            
+                            
 
 
                             {/* Méthode de datation */}
