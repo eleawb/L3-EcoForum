@@ -350,8 +350,10 @@ const renderCategoryTree = (categorie: any, depth: number) => {
 
             <Container maxWidth="md" sx={{ mt: 4 }}>
                 <Paper elevation={3} sx={{ p: 4 }}>
-                    <Typography variant="h4" gutterBottom align="center">Formulaire de recherche</Typography>
-
+                <Typography variant="h5" margin={2} gutterBottom sx={{ color: '#5d4037' }}>
+                <center><b>FORMULAIRE DE RECHERCHE</b></center>
+                <br></br>
+                </Typography>
                     <form onSubmit={boutonSubmit}>
                         <Stack spacing={3}>
 
@@ -363,7 +365,7 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                               <>
                               {/* Filtre par catégorie */}
                               <Box sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.2 }}>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: -1.5 }}>
                                       <Typography variant="subtitle1" sx={{ color: '#666', mb: 1, display: 'block' }}>
                                           Filtrer par catégorie
                                       </Typography>
