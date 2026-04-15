@@ -38,18 +38,19 @@ app.get('/api/instruments', async (req, res) => {
 app.get('/api/categories', async (req, res) => {
     try {
         const result = await client.query(`SELECT * FROM public.categorie_variable ORDER BY id_categorie ASC `);
+        console.log("Nombre de catégories trouvées:", result.rows.length)
+        console.log("Première catégorie:", result.rows[0])
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-
-
 //route pour récupérer les instruments par catégories
 app.post('/api/instruments/by-categories', async (req, res) => {
     const { categories } = req.body;
-    console.log(`Recherche des instruments pour les catégories: ${categories}`);
+    console.log(`Nombre de catégories sélectionnées: ${categories.length}`);
+    console.log(`Recherche des instruments pour les catégories:`, categories);
     try {
         const result = await client.query(`
             SELECT DISTINCT 
@@ -65,11 +66,11 @@ app.post('/api/instruments/by-categories', async (req, res) => {
             JOIN variable_mesuree vm ON vm.id_variable_mesuree = vas.id_variable
             JOIN possede_categorie pc ON pc.id_variable = vm.id_variable_mesuree
             JOIN categorie_variable cv ON cv.id_categorie = pc.id_categorie
-            WHERE cv.nom = $1 
-               OR cv.id_parent IN (SELECT id_categorie FROM categorie_variable WHERE nom = $1)
+            WHERE cv.nom = ANY($1) 
+               OR cv.id_parent IN (SELECT id_categorie FROM categorie_variable WHERE nom = ANY($1))
             ORDER BY i.id_instrument ASC
         `, [categories]);
-        console.log(`${result.rows.length} instrument(s) trouvé(s) pour cette catégorie`);
+        console.log(`${result.rows.length} instrument(s) trouvé(s) pour la catégorie `, categories);
         res.json(result.rows);
     } catch (err) {
         console.error('Erreur:', err.message);

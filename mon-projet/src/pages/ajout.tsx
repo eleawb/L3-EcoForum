@@ -40,8 +40,10 @@ function Ajout() {
 
       <Container maxWidth="md" sx={{ mt: 4 }}>
       <Paper elevation={4} sx={{ p: 4 }}> 
-        <Typography variant="h4" gutterBottom align="center">Veuillez choisir une méthode :</Typography>
-        
+      <Typography variant="h5" margin={2} gutterBottom sx={{ color: '#5d4037' }}>
+                <center><b>VEUILLEZ CHOISIR UNE MÉTHODE :</b></center>
+                <br></br>
+                </Typography>        
         <Stack direction="row" spacing={2} justifyContent="center">
         <Button
               type="submit"
