@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search as SearchIcon } from '@mui/icons-material'
+import { Search as SearchIcon, Add as AddIcon, Delete as DeleteIcon  } from '@mui/icons-material'
 
 import {
   Radio,
@@ -8,6 +8,7 @@ import {
   TextField,
   Select,
   Switch,
+  FormGroup,
   RadioGroup,
   AppBar,
   Toolbar,
@@ -45,6 +46,14 @@ function Recherche() {
 
 
     // Méthode de datation
+    //si choix dates précises
+    const [datesPrecises, setDatesPrecises] = useState(false)
+  //si choix périodes 
+  const [periodesTemp, setPeriodesTemp] = useState(false)
+// alors, états pour les jours de la semaine
+const [joursSemaine, setJoursSemaine] = useState<string[]>([]);
+const [periodesAjoutees, setPeriodesAjoutees] = useState<Array<{id: string, type: string, valeur: string}>>([]);
+
     const [choixDate, setChoixDate] = useState('')
     const [jourdeb, setJourDeb] = useState('')
     const [jourfin, setJourFin] = useState('')
@@ -337,6 +346,213 @@ const renderCategoryTree = (categorie: any, depth: number) => {
 
     const listeInstruments = categoriesSelectionnees.length>0 ? instrumentsFiltres : instrumentsDisponibles
 
+
+//datation
+// gérer la sélection des jours
+const handleJourChange = (jour : string) => {
+  if (joursSemaine.includes(jour)) {
+    setJoursSemaine(joursSemaine.filter(j => j !== jour))
+} else {
+    setJoursSemaine([...joursSemaine, jour])
+}
+}
+
+// Fonction pour EnvoiPeriodes
+const EnvoiPeriodes = () => {
+    if (!periodesTemp) {
+        setPeriodesTemp(true)
+        setDatesPrecises(false) // Désactiver dates précises si période est cochée
+    } else {
+        setPeriodesTemp(false)
+    }
+}
+
+// Fonction pour EnvoiDatesPrecises
+const EnvoiDatesPrecises = () => {
+    if (!datesPrecises) {
+        setDatesPrecises(true)
+        setPeriodesTemp(false) // Désactiver période si dates précises est cochée
+    } else {
+        setDatesPrecises(false)
+    }
+}
+
+//si bouton Tout sélectionner (jours) coché
+const handleSelectAll = () => {
+  if (joursSemaine.length === 7) {
+      // Si tous les jours sont sélectionnés, on désélectionne tout
+      setJoursSemaine([])
+  } else {
+      // Sinon, on sélectionne tous les jours
+      setJoursSemaine(['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']);
+  }
+}
+
+//verification si tous les jours sont cochés quand Tout sélectionner
+const isAllSelected = joursSemaine.length === 7;
+
+
+// Fonction pour ajouter une période
+const ajouterPeriode = (type: string) => {
+    const nouvellePeriode = {
+        id: `${Date.now()}-${Math.random()}`,
+        type: type,
+        valeur: ''
+    };
+    setPeriodesAjoutees([...periodesAjoutees, nouvellePeriode]);
+};
+
+// Fonction pour supprimer une période
+const supprimerPeriode = (id: string) => {
+    setPeriodesAjoutees(periodesAjoutees.filter(periode => periode.id !== id));
+};
+
+// Fonction pour mettre à jour la valeur d'une période
+const updatePeriodeValeur = (id: string, valeur: string) => {
+    setPeriodesAjoutees(periodesAjoutees.map(periode => 
+        periode.id === id ? {...periode, valeur: valeur} : periode
+    ));
+};
+
+// Rendu conditionnel pour chaque type de période
+const renderPeriodeInput = (periode: {id: string, type: string, valeur: string}) => {
+    switch(periode.type) {
+        case 'Heure':
+            return (
+                <Stack direction="row" spacing={2} alignItems="center">
+                    <input 
+                        type="time" 
+                        
+                        value={periode.valeur.split('-')[0] || ''} 
+                        onChange={(e) => updatePeriodeValeur(periode.id, `${e.target.value}-${periode.valeur.split('-')[1] || ''}`)} 
+                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                        placeholder="Heure début"
+                    /> 
+                    <input 
+                        type="time" 
+                        
+                        value={periode.valeur.split('-')[1] || ''} 
+                        onChange={(e) => updatePeriodeValeur(periode.id, `${periode.valeur.split('-')[0] || ''}-${e.target.value}`)} 
+                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                        placeholder="Heure fin"
+                    />
+                </Stack>
+            );
+        case 'Jour':
+            // Récupérer les jours actuels depuis periode.valeur
+            const joursActuels = periode.valeur ? periode.valeur.split(',').filter(j => j !== '') : []
+            const tousJoursSelectionnes = joursActuels.length === 7
+            // Fonction pour sélectionner tous les jours
+            const selectTousJours = () => {
+              if (tousJoursSelectionnes) {
+                updatePeriodeValeur(periode.id, '')
+            } else {
+                const tousLesJours = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
+                updatePeriodeValeur(periode.id, tousLesJours.join(','))
+            }
+        }
+            return (
+                <Stack direction="row" spacing={2} alignItems="center">
+                  <FormControlLabel control={
+                    <Checkbox checked={tousJoursSelectionnes} onChange={selectTousJours}/>}
+                    label={
+                      <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
+                        Tout sélectionner
+                      </Typography>
+                      }
+                      />
+                    <FormGroup row>
+                        {['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'].map(jour => (
+                            <FormControlLabel
+                                key={jour}
+                                control={
+                                    <Checkbox
+                                        checked={periode.valeur.split(',').includes(jour)}
+                                        onChange={(e) => {
+                                            const joursActuels = periode.valeur ? periode.valeur.split(',') : [];
+                                            let nouveauxJours;
+                                            if (e.target.checked) {
+                                                nouveauxJours = [...joursActuels, jour];
+                                            } else {
+                                                nouveauxJours = joursActuels.filter(j => j !== jour);
+                                            }
+                                            updatePeriodeValeur(periode.id, nouveauxJours.join(','));
+                                        }}
+                                        size="small"
+                                    />
+                                }
+                                label={jour.charAt(0).toUpperCase() + jour.slice(1)}
+                            />
+                        ))}
+                    </FormGroup>
+                </Stack>
+            );
+        case 'Semaine':
+            return (
+                <Stack direction="row" spacing={2} alignItems="center">
+                    <input 
+                        type="week" 
+                        value={periode.valeur.split('-')[0] || ''} 
+                        onChange={(e) => updatePeriodeValeur(periode.id, `${e.target.value}-${periode.valeur.split('-')[1] || ''}`)} 
+                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                        placeholder="Semaine début"
+                    />
+                    <input 
+                        type="week" 
+                        value={periode.valeur.split('-')[1] || ''} 
+                        onChange={(e) => updatePeriodeValeur(periode.id, `${periode.valeur.split('-')[0] || ''}-${e.target.value}`)} 
+                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                        placeholder="Semaine fin"
+                    />
+                </Stack>
+            );
+        case 'Mois':
+            return (
+                <Stack direction="row" spacing={2} alignItems="center">
+                    <input 
+                        type="month" 
+                        value={periode.valeur.split('-')[0] || ''} 
+                        onChange={(e) => updatePeriodeValeur(periode.id, `${e.target.value}-${periode.valeur.split('-')[1] || ''}`)} 
+                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                        placeholder="Mois début"
+                    />
+                    <input 
+                        type="month" 
+                        value={periode.valeur.split('-')[1] || ''} 
+                        onChange={(e) => updatePeriodeValeur(periode.id, `${periode.valeur.split('-')[0] || ''}-${e.target.value}`)} 
+                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                        placeholder="Mois fin"
+                    />
+                </Stack>
+            );
+        case 'Année':
+            return (
+                <Stack direction="row" spacing={2} alignItems="center">
+                    <input 
+                        type="number" 
+                        value={periode.valeur.split('-')[0] || ''} 
+                        onChange={(e) => updatePeriodeValeur(periode.id, `${e.target.value}-${periode.valeur.split('-')[1] || ''}`)} 
+                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                        placeholder="Année début"
+                        min="1900"
+                        max="2100"
+                    />
+                    <input 
+                        type="number" 
+                        value={periode.valeur.split('-')[1] || ''} 
+                        onChange={(e) => updatePeriodeValeur(periode.id, `${periode.valeur.split('-')[0] || ''}-${e.target.value}`)} 
+                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                        placeholder="Année fin"
+                        min="1900"
+                        max="2100"
+                    />
+                </Stack>
+            );
+        default:
+            return null;
+    }
+};
+
     return (
         <Box sx={{ flexGrow: 1 }}>
             <AppBar position="static" sx={{ bgcolor: "#0370B2" }}>
@@ -490,11 +706,167 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                             )}
                             
                             
+                            
 
 
                             {/* Méthode de datation */}
                             <Box key="date-box" sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
                                 <InputLabel>Veuillez choisir une méthode de datation :</InputLabel>
+                                
+                                <FormControlLabel
+                                    control={
+                                    <Checkbox 
+                                        checked={datesPrecises}
+                                        onChange={EnvoiDatesPrecises}
+                                        size="small"
+                                        sx={{
+                                          color: '#666',
+                                          '&.Mui-checked': { color: '#666' },
+                                          transform: 'scale(0.8)'
+                                        }}
+                                    />
+                                    }
+                                    label={
+                                    <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
+                                      Je recherche des données sur des dates précises
+                                    </Typography>
+                                    }
+                                    />
+                                    <FormControlLabel
+                                    control={ 
+                                      <Checkbox
+                                        checked={periodesTemp}
+                                        onChange={EnvoiPeriodes}
+                                        size="small"
+                                        sx={{
+                                          color: '#666',
+                                          '&.Mui-checked': { color: '#666' },
+                                          transform: 'scale(0.8)'
+                                        }}
+                                    />
+                                    }
+                                    label={
+                                    <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
+                                      Je recherche des données sur des périodes générales
+                                    </Typography>
+                                    }
+                                  />
+                
+                                
+
+                                 {/* choix des jours de la semaine pour les périodes */}
+                                  {periodesTemp && (
+                                    <>
+                                      <Divider sx={{ my: 2 }} />
+
+                            <InputLabel>Ajouter les informations utiles à la période que vous recherchez :</InputLabel>
+                                          {/* Boutons pour ajouter des périodes */}
+                                          <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}>
+
+                              <Button
+                                  variant="contained"
+                                  startIcon={<AddIcon />}
+                                  onClick={() => ajouterPeriode('Jour')}
+                                  sx={{
+                                      bgcolor: '#0370B2',
+                                      '&:hover': { bgcolor: '#00517C' },
+                                      fontSize: '0.75rem',
+                                      py: 0.5
+                                  }}
+                              >
+                                  Jour
+                              </Button>
+
+                              <Button
+                                  variant="contained"
+                                  startIcon={<AddIcon />}
+                                  onClick={() => ajouterPeriode('Heure')}
+                                  sx={{
+                                      bgcolor: '#0370B2',
+                                      '&:hover': { bgcolor: '#00517C' },
+                                      fontSize: '0.75rem',
+                                      py: 0.5
+                                  }}
+                              >
+                                  Heure
+                              </Button>
+
+                              <Button
+                                  variant="contained"
+                                  startIcon={<AddIcon />}
+                                  onClick={() => ajouterPeriode('Semaine')}
+                                  sx={{
+                                      bgcolor: '#0370B2',
+                                      '&:hover': { bgcolor: '#00517C' },
+                                      fontSize: '0.75rem',
+                                      py: 0.5
+                                  }}
+                              >
+                                  Semaine
+                              </Button>
+                              <Button
+                                  variant="contained"
+                                  startIcon={<AddIcon />}
+                                  onClick={() => ajouterPeriode('Mois')}
+                                  sx={{
+                                      bgcolor: '#0370B2',
+                                      '&:hover': { bgcolor: '#00517C' },
+                                      fontSize: '0.75rem',
+                                      py: 0.5
+                                  }}
+                              >
+                                  Mois
+                              </Button>
+                              <Button
+                                  variant="contained"
+                                  startIcon={<AddIcon />}
+                                  onClick={() => ajouterPeriode('Année')}
+                                  sx={{
+                                      bgcolor: '#0370B2',
+                                      '&:hover': { bgcolor: '#00517C' },
+                                      fontSize: '0.75rem',
+                                      py: 0.5
+                                  }}
+                              >
+                                  Année
+                              </Button>
+                          </Stack>
+
+                          {/* Liste des périodes ajoutées */}
+                          {periodesAjoutees.length > 0 && (
+                              <Stack spacing={2}>
+                                  <Typography variant="subtitle2" sx={{ color: '#666' }}>
+                                      Périodes sélectionnées :
+                                  </Typography>
+                                  {periodesAjoutees.map((periode) => (
+                                      <Paper key={periode.id} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                                          <Stack spacing={2}>
+                                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                  <Typography variant="subtitle2" sx={{ color: '#0370B2' }}>
+                                                      {periode.type}
+                                                  </Typography>
+                                                  <Button
+                                                      size="small"
+                                                      color="error"
+                                                      startIcon={<DeleteIcon />}
+                                                      onClick={() => supprimerPeriode(periode.id)}
+                                                  >
+                                                      Supprimer
+                                                  </Button>
+                                              </Box>
+                                              {renderPeriodeInput(periode)}
+                                          </Stack>
+                                      </Paper>
+                                  ))}
+                              </Stack>
+                          )}
+                      </>
+                  )}
+                  </Box>
+
+                               
+                                {datesPrecises && (
+                                  <>
                                 <FormControl component="fieldset">
                                     <RadioGroup row value={choixDate} onChange={(e) => setChoixDate(e.target.value)}>
                                         <FormControlLabel value="Heure" control={<Radio />} label="Heure" />
@@ -504,13 +876,13 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                                         <FormControlLabel value="Année" control={<Radio />} label="Année" />
                                     </RadioGroup>
                                 </FormControl>
-                            </Box>
+                            
 
                             {/* Heure */}
                             {choixDate === 'Heure' && (
                                 <Stack direction="row" spacing={2}>
-                                    <input type="time" value={heuredeb} onChange={(e) => setHeureDeb(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} />
-                                    <input type="time" value={heurefin} onChange={(e) => setHeureFin(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} />
+                                    <input type="time" value={heuredeb} onChange={(e) => setHeureDeb(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}>From : </input>
+                                    <input type="time" value={heurefin} onChange={(e) => setHeureFin(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} >To : </input>
                                 </Stack>
                             )}
 
@@ -545,6 +917,8 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                                     <input type="date" value={anneefin} onChange={(e) => setAnneeFin(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} />
                                 </Stack>
                             )}
+                                </>
+                                )}
 
                             <Button type="submit" variant="contained" startIcon={<SearchIcon />} sx={{ bgcolor: '#0370B2', '&:hover': { bgcolor: '#00517C' } }}>
                                 Rechercher
