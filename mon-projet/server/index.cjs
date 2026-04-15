@@ -13,7 +13,6 @@ const client = new Client({
     user: "postgres",
     port: 5432,
     password: "post",
-    //database: "testEcoforum_db"
     database: "postgres"
 
 });
@@ -37,7 +36,7 @@ app.get('/api/instruments', async (req, res) => {
 //route pour récupérer toutes les catégories
 app.get('/api/categories', async (req, res) => {
     try {
-        const result = await client.query(`SELECT * FROM public.categorie_variable ORDER BY id_categorie ASC `);
+        const result = await  client.query(`SELECT * FROM public.categorie_variable ORDER BY id_categorie ASC `);
         console.log("Nombre de catégories trouvées:", result.rows.length)
         console.log("Première catégorie:", result.rows[0])
         res.json(result.rows);
