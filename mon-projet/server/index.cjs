@@ -10,11 +10,11 @@ app.use(express.json());
 
 const client = new Client({
     host: "localhost",
-    user: "eleaweber",
+    user: "postgres",
     port: 5432,
     password: "post",
     //database: "testEcoforum_db"
-    database: "EcoForum"
+    database: "postgres"
 
 });
 

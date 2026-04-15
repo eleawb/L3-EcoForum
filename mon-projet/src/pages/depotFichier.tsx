@@ -242,24 +242,24 @@ function DepotFichier(){
                 {showAdditionalInputs && (
                   <>
                     <FormControl fullWidth required>
-                      <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
+                      <InputLabel>Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier</InputLabel>
                       <Select
                         value={selectedInstrument}
                         onChange={handleInstrumentChange}
-                        label="Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier"
+                        label="Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier"
                       >
-                        <MenuItem value="instrument1">Instrument 1</MenuItem>
-                        <MenuItem value="instrument2">Instrument 2</MenuItem>
-                        <MenuItem value="instrument3">Instrument 3</MenuItem>
+                        <MenuItem value="instrument1">Capteur 1</MenuItem>
+                        <MenuItem value="instrument2">Capteur 2</MenuItem>
+                        <MenuItem value="instrument3">Capteur 3</MenuItem>
                       </Select>
                     </FormControl>
 
                     <FormControl fullWidth required>
-                      <InputLabel>Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier</InputLabel>
+                      <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
                       <Select
                         value={selectedCapteur}
                         onChange={handleCapteurChange}
-                        label="Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier"
+                        label="Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier"
                       >
                         <MenuItem value="capteur1">KUNAK</MenuItem>
                         <MenuItem value="capteur2">HOBO</MenuItem>
