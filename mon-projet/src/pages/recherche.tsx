@@ -179,24 +179,19 @@ const [periodesAjoutees, setPeriodesAjoutees] = useState<Array<{id: string, type
     
 
  // Gestion de la sélection d'un instrument
- const InstrumentSelection = (valeurInstrument: string) => {
+ // Au lieu de stocker les noms, stocke les IDs
+const InstrumentSelection = (valeurId: number) => {
   setInstrumentsSelectionnes(prev => {
-    let nvSelection:string[]
-      if (prev.includes(valeurInstrument)) {
-          nvSelection = prev.filter(v => v !== valeurInstrument)
+      if (prev.includes(valeurId.toString())) {
+          return prev.filter(v => v !== valeurId.toString())
       } else {
-          nvSelection= [...prev, valeurInstrument]
+          return [...prev, valeurId.toString()]
       }
-     
-    // verif si tous les instruments sont sélectionnés
-    const ToutesLesValeurs = listeInstruments.map(item => item.nom_outil || item.modele)
-    const estTTselectionne = ToutesLesValeurs.length === nvSelection.length && ToutesLesValeurs.length>0 && ToutesLesValeurs.every(v=>nvSelection.includes(v))
-  
-    setSelectTout(estTTselectionne)
-    return nvSelection
   })
+  setSelectTout(false)
+}
 
-  }
+  
 
 // afficher les catégories avec indentation selon le niveau
 const affichageCategoriesNiveaux = (categorie: any, profondeur: number) => {
@@ -330,15 +325,23 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    instrument: instrumentsSelectionnes,
+                    instrumentIds: instrumentsSelectionnes,
                     choixDate: choixDate,
                     dateDebut: jourdeb || heuredeb || semainedeb || moisdeb || anneedeb,
                     dateFin: jourfin || heurefin || semainefin || moisfin || anneefin
                 })
             })
+            if (response.ok){
             const resultats = await response.json()
             console.log('Résultats de la recherche:', resultats)
-        } catch (error) {
+            //on va sur la page d'affichage des données
+            navigate('/resultatsRecherche', { state: { resultats: resultats } })
+
+            }else {
+              alert('Erreur lors de la recherche')
+            } 
+
+          } catch (error) {
             console.error('Erreur lors de la recherche:', error)
             alert('Erreur lors de la recherche')
         }
@@ -690,8 +693,8 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                     key={item.id_instrument}
                                                     control={
                                                         <Checkbox
-                                                            checked={instrumentsSelectionnes.includes(item.nom_outil || item.modele)}
-                                                            onChange={() => InstrumentSelection(item.nom_outil || item.modele)}
+                                                            checked={instrumentsSelectionnes.includes(item.id_instrument.toString())}
+                                                            onChange={() => InstrumentSelection(item.id_instrument)}
                                                             size="small"
                                                         />
                                                     }
@@ -919,11 +922,23 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                             )}
                                 </>
                                 )}
+                                        <Stack direction="row" spacing={2} justifyContent="center">
 
-                            <Button type="submit" variant="contained" startIcon={<SearchIcon />} sx={{ bgcolor: '#0370B2', '&:hover': { bgcolor: '#00517C' } }}>
-                                Rechercher
-                            </Button>
-                          
+        
+                            <Button
+                              type="submit"
+                              variant="contained"
+                              startIcon={<SearchIcon />}
+                              sx={{
+                                  bgcolor: '#0370B2',
+                                  '&:hover': { bgcolor: '#00517C' },
+                                  //fontSize: '0.75rem',
+                                  //py: 0.5
+                              }}
+                              >
+                              Rechercher
+                            </Button>   
+                          </Stack>
                         </Stack>
                     </form>
                 </Paper>

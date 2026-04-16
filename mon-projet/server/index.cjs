@@ -1,12 +1,12 @@
-const express = require('express');
-const cors = require('cors');
-const { Client } = require('pg');
+const express = require('express')
+const cors = require('cors')
+const { Client } = require('pg')
 
-const app = express();
-const port = 3000;
+const app = express()
+const port = 3000
 
-app.use(cors());
-app.use(express.json());
+app.use(cors())
+app.use(express.json())
 
 /* bdd fictive francisco
 const client = new Client({
@@ -30,19 +30,19 @@ const client = new Client({
 
 })
 
-client.connect();
+client.connect()
 
 
 // Route pour récupérer tous les instruments
 app.get('/api/instruments', async (req, res) => {
     try {
         //const result = await client.query(`SELECT * FROM public.instrument ORDER BY id_instrument ASC`);//bdd fictive
-        const result = await client.query(`SELECT * FROM instrument_mesure ORDER BY id_instrument ASC`);
-        res.json(result.rows);
+        const result = await client.query(`SELECT * FROM instrument_mesure ORDER BY id_instrument ASC`)
+        res.json(result.rows)
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err.message })
     } //afficher numéro instrument en plus du nom !!
-});
+})
 
 
 
@@ -52,17 +52,17 @@ app.get('/api/categories', async (req, res) => {
         const result = await  client.query(`SELECT * FROM public.categorie_variable ORDER BY id_categorie ASC `);
         console.log("Nombre de catégories trouvées:", result.rows.length)
         console.log("Première catégorie:", result.rows[0])
-        res.json(result.rows);
+        res.json(result.rows)
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: err.message })
     }
-});
+})
 
 //route pour récupérer les instruments par catégories
 app.post('/api/instruments/by-categories', async (req, res) => {
-    const { categories } = req.body;
-    console.log(`Nombre de catégories sélectionnées: ${categories.length}`);
-    console.log(`Recherche des instruments pour les catégories:`, categories);
+    const { categories } = req.body
+    console.log(`Nombre de catégories sélectionnées: ${categories.length}`)
+    console.log(`Recherche des instruments pour les catégories:`, categories)
     try {
         const result = await client.query(`
             SELECT DISTINCT 
@@ -83,13 +83,68 @@ app.post('/api/instruments/by-categories', async (req, res) => {
             ORDER BY i.id_instrument ASC
         `, [categories]);
         console.log(`${result.rows.length} instrument(s) trouvé(s) pour la catégorie `, categories);
-        res.json(result.rows);
+        res.json(result.rows)
     } catch (err) {
-        console.error('Erreur:', err.message);
-        res.status(500).json({ error: err.message });
+        console.error('Erreur:', err.message)
+        res.status(500).json({ error: err.message })
     }
-});
+})
+
+
+// Route pour chercher les résultats
+app.post('/api/recherche', async (req, res) => {
+    const { instrumentIds, choixDate, dateDebut, dateFin } = req.body
+    console.log("Recherche pour ids instrument:", instrumentIds)
+
+    try {
+        // Construire la requête SQL
+        let query = `
+            SELECT 
+                m.id_mesure,
+                m.valeur_mesure,
+                m.date_heure,
+                m.description_mesure,
+                i.nom_outil as instrument,
+                i.modele,
+                i.num_instrument,
+                cg.description as capteur
+             
+            FROM mesure m
+            JOIN serie_temporelle st ON st.id_st = m.id_st
+            JOIN capteur_generique cg ON cg.id_capteur_generique = st.id_capteur_gen
+            JOIN capteur c ON c.id_capteur = cg.id_capteur_generique
+            JOIN instrument_mesure i ON i.id_instrument = c.id_instrument
+            WHERE i.id_instrument = ANY($1::int[])
+        ` 
+        
+        let params = [instrumentIds.map(id => parseInt(id, 10))]
+        // Ajouter filtre de date si présent
+        if (dateDebut && dateFin) {
+            query += ` AND m.date_heure BETWEEN $2 AND $3`
+            params.push(dateDebut, dateFin)
+        }
+        
+        query += ` ORDER BY m.date_heure ASC`
+        
+        const result = await client.query(query, params)
+
+        if (result.rows.length > 1){
+            console.log(`${result.rows.length} résultats trouvés`)
+        } else if (result.rows.length === 1){
+            console.log(`${result.rows.length} résultat trouvé`)
+        } else {
+            console.log(`Aucun élément trouvé`)
+        }
+        res.json(result.rows)
+    } catch (err) {
+        console.error('Erreur:', err.message)
+        res.status(500).json({ error: err.message })
+    }
+})
+
+
+
 
 app.listen(port, () => {
-    console.log(`Serveur démarré sur http://localhost:${port}`);
-});
+    console.log(`Serveur démarré sur http://localhost:${port}`)
+})
