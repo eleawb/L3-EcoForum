@@ -778,7 +778,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
 
                             {/* Méthode de datation */}
                             <Box key="date-box" sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
-                                <InputLabel>Veuillez choisir une méthode de datation :</InputLabel>
+                                <InputLabel>Veuillez choisir une méthode de datation :</InputLabel><br></br>
                                 
                                 <FormControlLabel
                                     control={
@@ -826,7 +826,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                     <>
                                       <Divider sx={{ my: 2 }} />
 
-                            <InputLabel>Ajouter les informations utiles à la période que vous recherchez :</InputLabel>
+                            <InputLabel>Ajoutez les informations utiles à la période que vous recherchez :</InputLabel><br></br>
                                           {/* Boutons pour ajouter des périodes */}
                                           <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}>
 

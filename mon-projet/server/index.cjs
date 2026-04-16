@@ -51,7 +51,6 @@ app.get('/api/categories', async (req, res) => {
     try {
         const result = await  client.query(`SELECT * FROM public.categorie_variable ORDER BY id_categorie ASC `);
         console.log("Nombre de catégories trouvées:", result.rows.length)
-        console.log("Première catégorie:", result.rows[0])
         res.json(result.rows)
     } catch (err) {
         res.status(500).json({ error: err.message })

@@ -14,3 +14,9 @@
 - Anne-Muriel Arigon
 - Marine Zwicke
 - Annie Chateau
+
+Dans # package.json, explications des dépendences
+
+voir s'il suffit de taper "npm run dependencies" et "devDependencies" pour installer les dépendences
+
+pour lancer le client et le serveur en simultané : lancer "npm run dev:all"

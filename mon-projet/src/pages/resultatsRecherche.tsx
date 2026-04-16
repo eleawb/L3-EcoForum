@@ -79,7 +79,7 @@ function ResultatsRecherche() {
                     </Typography>
 
                     <Button color="inherit" onClick={() => navigate('/')}>
-                        RETOUR MENU
+                         MENU
                     </Button>
 
                     <Button color="inherit" onClick={() => navigate('/recherche')}>

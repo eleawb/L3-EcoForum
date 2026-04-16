@@ -40,7 +40,7 @@ function Materiel() {
               <Toolbar>
               
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                  DOCUMENTATION MATÉRIEL
+                  INSTRUMENTS DE MESURE
                 </Typography>
                 <Button color="inherit" onClick={() => navigate('/')}>Retour</Button>
               </Toolbar>
