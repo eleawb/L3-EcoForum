@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search as SearchIcon, Add as AddIcon, Delete as DeleteIcon  } from '@mui/icons-material'
+import { Search as SearchIcon, Add as AddIcon, Delete as DeleteIcon  } from '@mui/icons-material' //icônes prévues sur MaterialUI pour être user friendly
 
 import {
   Radio,
@@ -30,29 +30,29 @@ import {
 
 function Recherche() {
     const navigate = useNavigate()
-    const [categories, setCategories] = useState<any[]>([])
-    const [instrumentsSelectionnes, setInstrumentsSelectionnes] = useState<string[]>([])
-    const [ddate, setDate] = useState('')
 
+    const [instrumentsDisponibles, setInstrumentsDisponibles] = useState<any[]>([]) //instruments disponibles selon la catégorie / bdd en général
+    const [chargement, setChargement] = useState(true) //boucle de chargement si la récupération initiale des instruments de la bdd est trop long ou pb infini
+    const [categories, setCategories] = useState<any[]>([]) //récupérer les catégories de la bdd
+    
+    //choix instruments
+    const [instrumentsSelectionnes, setInstrumentsSelectionnes] = useState<string[]>([]) //récupérer les instruments sélectionnés par l'user
+    const [selectTout, setSelectTout] = useState(false) //booléen pour savoir quand le bouton "tt sélectionner" pour les instruments est coché
 
-    const [instrumentsDisponibles, setInstrumentsDisponibles] = useState<any[]>([])
-    const [chargement, setChargement] = useState(true)
-    const [selectTout, setSelectTout] = useState(false)
-
+    //filtre catégorie
     const [filtreActif, setFiltreActif] = useState(false) //faire apparaitre ou pas le filtre catégorie
-    const [categoriesSelectionnees, setCategoriesSelectionnees] = useState<string[]>([]) 
-    const [instrumentsFiltres, setInstrumentsFiltres] = useState<any[]>([])
-    const [messageErreur, setMessageErreur] = useState('') //pr recup le nom des catégories choisies
+    const [categoriesSelectionnees, setCategoriesSelectionnees] = useState<string[]>([]) //récupérer la ou les catégories sélectionnées par l'user
+    const [instrumentsFiltres, setInstrumentsFiltres] = useState<any[]>([]) //récupérer les instruments filtrés
+    const [messageErreur, setMessageErreur] = useState('') 
 
-
-    // Méthode de datation
+    // méthodes de datation
     //si choix dates précises
     const [datesPrecises, setDatesPrecises] = useState(false)
-  //si choix périodes 
-  const [periodesTemp, setPeriodesTemp] = useState(false)
-// alors, états pour les jours de la semaine
-const [joursSemaine, setJoursSemaine] = useState<string[]>([]);
-const [periodesAjoutees, setPeriodesAjoutees] = useState<Array<{id: string, type: string, valeur: string}>>([]);
+    //si choix périodes temporelles
+    const [periodesTemp, setPeriodesTemp] = useState(false) 
+      const [joursSemaine, setJoursSemaine] = useState<string[]>([]) // alors, états pour les jours de la semaine
+      const [periodesAjoutees, setPeriodesAjoutees] = useState<Array<{id: string, type: string, valeur: string}>>([]) //états pour gérer les sélections d'heure, jour, mois ou semaine
+      const [heuresPlages, setHeuresPlages] = useState<Array<{id: string, debut: string, fin: string}>>([]) // etat pour stock les différentes plages horaires choisies
 
     const [choixDate, setChoixDate] = useState('')
     const [jourdeb, setJourDeb] = useState('')
@@ -71,17 +71,16 @@ const [periodesAjoutees, setPeriodesAjoutees] = useState<Array<{id: string, type
             console.log("début du fetch data")
             try {
 
-                const instrumentsRes = await fetch('http://localhost:3000/api/instruments')
-                const instrumentsData = await instrumentsRes.json()
-                setInstrumentsDisponibles(instrumentsData || [])
+                const instrumentsRes = await fetch('http://localhost:3000/api/instruments') //récupérer les instruments de la bdd
+                const instrumentsData = await instrumentsRes.json() //conversion 
+                setInstrumentsDisponibles(instrumentsData || []) //si pas de données, on laisse vide
                 
-                const categoriesRes = await fetch('http://localhost:3000/api/categories')
-                const categoriesData = await categoriesRes.json()
-                console.log("Catégories reçues du backend:", categoriesData)
-                //setCategories(categoriesData || [])
+                const categoriesRes = await fetch('http://localhost:3000/api/categories') //récupérer les catégories de la bdd
+                const categoriesData = await categoriesRes.json() //conversion
+                console.log("Catégories reçues du backend:", categoriesData) //debug
                 setCategories([...categoriesData])
 
-                console.log("Catégories chargées")
+                console.log("Catégories chargées") //debug
                 
                 setChargement(false)
             } catch (error) {
@@ -92,10 +91,6 @@ const [periodesAjoutees, setPeriodesAjoutees] = useState<Array<{id: string, type
         fetchData()
     }, [])
 
-    //debug cat
-    useEffect(() => {
-      console.log("🟢 categories a changé !", categories.length)
-    }, [categories])
 
     //recup les ss catégories d'une catégorie
     const getToutesSScat = (categorieNom: string): string[] => {
@@ -380,19 +375,7 @@ const EnvoiDatesPrecises = () => {
     }
 }
 
-//si bouton Tout sélectionner (jours) coché
-const handleSelectAll = () => {
-  if (joursSemaine.length === 7) {
-      // Si tous les jours sont sélectionnés, on désélectionne tout
-      setJoursSemaine([])
-  } else {
-      // Sinon, on sélectionne tous les jours
-      setJoursSemaine(['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']);
-  }
-}
 
-//verification si tous les jours sont cochés quand Tout sélectionner
-const isAllSelected = joursSemaine.length === 7;
 
 
 // Fonction pour ajouter une période
@@ -401,46 +384,112 @@ const ajouterPeriode = (type: string) => {
         id: `${Date.now()}-${Math.random()}`,
         type: type,
         valeur: ''
-    };
-    setPeriodesAjoutees([...periodesAjoutees, nouvellePeriode]);
-};
+    }
+    setPeriodesAjoutees([...periodesAjoutees, nouvellePeriode])
+}
 
 // Fonction pour supprimer une période
 const supprimerPeriode = (id: string) => {
-    setPeriodesAjoutees(periodesAjoutees.filter(periode => periode.id !== id));
+    setPeriodesAjoutees(periodesAjoutees.filter(periode => periode.id !== id))
 };
 
 // Fonction pour mettre à jour la valeur d'une période
 const updatePeriodeValeur = (id: string, valeur: string) => {
     setPeriodesAjoutees(periodesAjoutees.map(periode => 
         periode.id === id ? {...periode, valeur: valeur} : periode
-    ));
-};
+    ))
+}
+
+//ajouter de nouvelles heures dans la box Heure
+const ajouterNvHeure = () => {
+  const nouvelleHeure = {
+  id: `${Date.now()}-${Math.random()}`,
+        debut: '',
+        fin: ''
+    };
+    setHeuresPlages([...heuresPlages, nouvelleHeure])
+}
+
+// Fonction pour supprimer une plage horaire
+const supprimerHeure = (id: string) => {
+  setHeuresPlages(heuresPlages.filter(heure => heure.id !== id))
+}
+
+// Fonction pour mettre à jour une plage horaire
+const updateHeure = (id: string, champ: 'debut' | 'fin', valeur: string) => {
+  setHeuresPlages(heuresPlages.map(heure =>
+      heure.id === id ? { ...heure, [champ]: valeur } : heure
+  ))
+}
+
+
 
 // Rendu conditionnel pour chaque type de période
 const renderPeriodeInput = (periode: {id: string, type: string, valeur: string}) => {
     switch(periode.type) {
         case 'Heure':
             return (
-                <Stack direction="row" spacing={2} alignItems="center">
-                    <input 
-                        type="time" 
-                        
-                        value={periode.valeur.split('-')[0] || ''} 
-                        onChange={(e) => updatePeriodeValeur(periode.id, `${e.target.value}-${periode.valeur.split('-')[1] || ''}`)} 
-                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
-                        placeholder="Heure début"
-                    /> 
-                    <input 
-                        type="time" 
-                        
-                        value={periode.valeur.split('-')[1] || ''} 
-                        onChange={(e) => updatePeriodeValeur(periode.id, `${periode.valeur.split('-')[0] || ''}-${e.target.value}`)} 
-                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
-                        placeholder="Heure fin"
-                    />
-                </Stack>
-            );
+              
+              <Box>
+              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                  <input 
+                      type="time" 
+                      value={periode.valeur.split('-')[0] || ''} 
+                      onChange={(e) => updatePeriodeValeur(periode.id, `${e.target.value}-${periode.valeur.split('-')[1] || ''}`)} 
+                      style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                      placeholder="Heure début"
+                  /> 
+                  <input 
+                      type="time" 
+                      value={periode.valeur.split('-')[1] || ''} 
+                      onChange={(e) => updatePeriodeValeur(periode.id, `${periode.valeur.split('-')[0] || ''}-${e.target.value}`)} 
+                      style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                      placeholder="Heure fin"
+                  />
+              </Stack>
+              
+              {/* Plages horaires multiples */}
+              <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 2, mb: 1 }}>
+                  Plages horaires supplémentaires :
+              </Typography>
+              
+              {heuresPlages.map((heure) => (
+                  <Stack key={heure.id} direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                      <input 
+                          type="time" 
+                          value={heure.debut} 
+                          onChange={(e) => updateHeure(heure.id, 'debut', e.target.value)} 
+                          style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                          placeholder="Heure début"
+                      />
+                      <input 
+                          type="time" 
+                          value={heure.fin} 
+                          onChange={(e) => updateHeure(heure.id, 'fin', e.target.value)} 
+                          style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                          placeholder="Heure fin"
+                      />
+                      <Button
+                          size="small"
+                          color="error"
+                          onClick={() => supprimerHeure(heure.id)}
+                          sx={{ minWidth: 'auto' }}
+                      >
+                          <DeleteIcon fontSize="small" />
+                      </Button>
+                  </Stack>
+              ))}
+              
+              <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={ajouterNvHeure}
+                  sx={{ mt: 1, fontSize: '0.7rem' }}
+              >
+                  Ajouter une plage horaire
+              </Button>
+          </Box>
+      )
         case 'Jour':
             // Récupérer les jours actuels depuis periode.valeur
             const joursActuels = periode.valeur ? periode.valeur.split(',').filter(j => j !== '') : []
@@ -489,7 +538,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                         ))}
                     </FormGroup>
                 </Stack>
-            );
+            )
         case 'Semaine':
             return (
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -508,26 +557,56 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                         placeholder="Semaine fin"
                     />
                 </Stack>
-            );
+            )
         case 'Mois':
+            // Récupérer les mois actuels depuis periode.valeur
+            const moisActuels = periode.valeur ? periode.valeur.split(',').filter(j => j !== '') : []
+            const tousMoisSelectionnes = moisActuels.length === 12
+            // Fonction pour sélectionner tous les mois
+            const selectTousMois = () => {
+              if (tousMoisSelectionnes) {
+                updatePeriodeValeur(periode.id, '')
+            } else {
+                const tousLesMois = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+                updatePeriodeValeur(periode.id, tousLesMois.join(','))
+            }
+        }
             return (
                 <Stack direction="row" spacing={2} alignItems="center">
-                    <input 
-                        type="month" 
-                        value={periode.valeur.split('-')[0] || ''} 
-                        onChange={(e) => updatePeriodeValeur(periode.id, `${e.target.value}-${periode.valeur.split('-')[1] || ''}`)} 
-                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
-                        placeholder="Mois début"
-                    />
-                    <input 
-                        type="month" 
-                        value={periode.valeur.split('-')[1] || ''} 
-                        onChange={(e) => updatePeriodeValeur(periode.id, `${periode.valeur.split('-')[0] || ''}-${e.target.value}`)} 
-                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
-                        placeholder="Mois fin"
-                    />
+                  <FormControlLabel control={
+                    <Checkbox checked={tousMoisSelectionnes} onChange={selectTousMois}/>}
+                    label={
+                      <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
+                        Tout sélectionner
+                      </Typography>
+                      }
+                      />
+                    <FormGroup row>
+                        {['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'].map(mois => (
+                            <FormControlLabel
+                                key={mois}
+                                control={
+                                    <Checkbox
+                                        checked={periode.valeur.split(',').includes(mois)}
+                                        onChange={(e) => {
+                                            const moisActuels = periode.valeur ? periode.valeur.split(',') : [];
+                                            let nouveauxMois;
+                                            if (e.target.checked) {
+                                              nouveauxMois = [...moisActuels, mois];
+                                            } else {
+                                                nouveauxMois = moisActuels.filter(j => j !== mois);
+                                            }
+                                            updatePeriodeValeur(periode.id, nouveauxMois.join(','));
+                                        }}
+                                        size="small"
+                                    />
+                                }
+                                label={mois.charAt(0).toUpperCase() + mois.slice(1)}
+                            />
+                        ))}
+                    </FormGroup>
                 </Stack>
-            );
+            )
         case 'Année':
             return (
                 <Stack direction="row" spacing={2} alignItems="center">
@@ -550,9 +629,9 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                         max="2100"
                     />
                 </Stack>
-            );
+            )
         default:
-            return null;
+            return null
     }
 };
 
@@ -884,8 +963,8 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                             {/* Heure */}
                             {choixDate === 'Heure' && (
                                 <Stack direction="row" spacing={2}>
-                                    <input type="time" value={heuredeb} onChange={(e) => setHeureDeb(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}>From : </input>
-                                    <input type="time" value={heurefin} onChange={(e) => setHeureFin(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} >To : </input>
+                                    <input type="time" value={heuredeb} onChange={(e) => setHeureDeb(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}> </input>
+                                    <input type="time" value={heurefin} onChange={(e) => setHeureFin(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} > </input>
                                 </Stack>
                             )}
 

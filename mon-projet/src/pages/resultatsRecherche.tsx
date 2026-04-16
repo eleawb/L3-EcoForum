@@ -76,9 +76,16 @@ function ResultatsRecherche() {
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                         RÉSULTATS DE LA RECHERCHE
                     </Typography>
-                    <Button color="inherit" onClick={() => navigate('/recherche')}>
-                        Nouvelle recherche
+
+                    <Button color="inherit" onClick={() => navigate('/')}>
+                        RETOUR MENU
                     </Button>
+
+                    <Button color="inherit" onClick={() => navigate('/recherche')}>
+                        NOUVELLE RECHERCHE
+                    </Button>
+
+
                 </Toolbar>
             </AppBar>
 
