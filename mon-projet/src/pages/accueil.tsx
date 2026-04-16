@@ -87,7 +87,7 @@ function Accueil() { //composant principal
             <Button
               variant="contained"
               startIcon={<SettingsIcon />}
-              onClick={() => navigate('/maintenance')}
+              onClick={() => navigate('/materiel')}
               size="large"
               sx={{
                 py:1.5,
@@ -95,7 +95,7 @@ function Accueil() { //composant principal
               '&:hover': { bgcolor: '#515151' } //qd on passe dessus
               }}
               >
-              MAINTENANCE DES CAPTEURS
+              INSTRUMENTS DE MESURE
             </Button>
 
 

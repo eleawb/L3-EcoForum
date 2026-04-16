@@ -78,11 +78,11 @@ function Recherche() {
                 const categoriesRes = await fetch('http://localhost:3000/api/categories') //récupérer les catégories de la bdd
                 const categoriesData = await categoriesRes.json() //conversion
                 console.log("Catégories reçues du backend:", categoriesData) //debug
-                setCategories([...categoriesData])
+                setCategories([...categoriesData]) //
 
                 console.log("Catégories chargées") //debug
                 
-                setChargement(false)
+                setChargement(false) //plus de boucle chargement
             } catch (error) {
                 console.error('Erreur lors du chargement des données:', error)
                 setChargement(false)
@@ -94,36 +94,36 @@ function Recherche() {
 
     //recup les ss catégories d'une catégorie
     const getToutesSScat = (categorieNom: string): string[] => {
-      if (!categorieNom|| categorieNom === 'null' || categorieNom === 'undefined') return []
+      if (!categorieNom|| categorieNom === 'null' || categorieNom === 'undefined') return [] //si pas réussi à récupérer les noms des catégories
       const result: string[] = [categorieNom]
       const categorie = categories.find(c => c.nom === categorieNom)
       if (!categorie) return result
       
-      const enfants = categories.filter(c => c.id_parent === categorie.id_categorie)
+      const enfants = categories.filter(c => c.id_parent === categorie.id_categorie) //classer catégories parents et enfants
       for (const enfant of enfants) {
         if (enfant && enfant.nom && enfant.nom!=='null') {
           result.push(...getToutesSScat(enfant.nom))
       }
     }
-      return result.filter(c => c && c.trim() !== '') //pas reucp les erreurs
+      return result.filter(c => c && c.trim() !== '') //pour pas reucp les erreurs
   }
 
-    // Changement de catégorie pour les instruments
+    // changement de catégorie pour les instruments
     const CategorieChangePourInstrument = async (values: string[]) => {
-      console.log("ids des catégories sélectionnées:", values)
+      console.log("ids des catégories sélectionnées:", values) //debug
       
       setCategoriesSelectionnees(values)
-      setInstrumentsSelectionnes([])
-      setSelectTout(false)
+      setInstrumentsSelectionnes([]) //pas encore sélectionné les instruments
+      setSelectTout(false) //pas encore coché "tout sélectionner"
   
-      if (values.length === 0) {
+      if (values.length === 0) { 
           setInstrumentsFiltres(instrumentsDisponibles)
           setMessageErreur('')
 
           return
       }
 
-      // Convertir en nombres pour l'API
+      // Convertir en nbs pour l'API
       const idsNumbers = values.map(v => parseInt(v, 10))
       
       // Récupérer les noms des catégories pour l'API
@@ -132,19 +132,20 @@ function Recherche() {
           return cat?.nom
       }).filter(Boolean)
 
-      console.log("noms des catégories envoyés à l'API:", nomsCategories)
+      console.log("noms des catégories envoyés à l'API:", nomsCategories) //debug
 
       
       try {
-          const response = await fetch('http://localhost:3000/api/instruments/by-categories', {
+          const response = await fetch('http://localhost:3000/api/instruments/by-categories', { 
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ categories: nomsCategories })
           })
           
-          if (response.ok) {
+          if (response.ok) { //on a bien récupéré qq chose
               const data = await response.json()
               setInstrumentsFiltres(data)
+              //tester quand même si rien trouvé :
               if (data.length === 0) {
                 // Construire le message d'erreur avec les noms des catégories
                 const message = nomsCategories.length > 1 
@@ -154,7 +155,7 @@ function Recherche() {
             } else {
                 setMessageErreur('')
             }
-          } else {
+          } else { //si pb à la récupération
               setInstrumentsFiltres([])
               const message = nomsCategories.length > 1 
                 ? `Aucun instrument ne correspond aux catégories "${nomsCategories.join(', ')}"`
@@ -173,8 +174,8 @@ function Recherche() {
 }
     
 
- // Gestion de la sélection d'un instrument
- // Au lieu de stocker les noms, stocke les IDs
+ // gestion de la sélection d'un instrument
+ // au lieu de stocker les noms, on stocke les ids (plus sûr)
 const InstrumentSelection = (valeurId: number) => {
   setInstrumentsSelectionnes(prev => {
       if (prev.includes(valeurId.toString())) {
@@ -183,14 +184,14 @@ const InstrumentSelection = (valeurId: number) => {
           return [...prev, valeurId.toString()]
       }
   })
-  setSelectTout(false)
+  setSelectTout(false) //tout sélectionner pas coché
 }
 
   
 
-// afficher les catégories avec indentation selon le niveau
+// afficher les catégories avec indentation visuelle selon le niveau de profondeur (parents/enfants)
 const affichageCategoriesNiveaux = (categorie: any, profondeur: number) => {
-  if (!categorie || !categorie.id_categorie || !categorie.nom) return null
+  if (!categorie || !categorie.id_categorie || !categorie.nom) return null //si pb récupération catégorie
   
   const enfants = categories.filter(c => c.id_parent === categorie.id_categorie)
   const estSelectionne = categoriesSelectionnees.includes(categorie.id_categorie.toString())

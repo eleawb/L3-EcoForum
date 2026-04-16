@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Download as DownloadIcon } from '@mui/icons-material'
+import { Download as DownloadIcon } from '@mui/icons-material' //icône téléchargement MUI
 import {
   AppBar,
   Toolbar,
@@ -22,11 +22,11 @@ import {
 function ResultatsRecherche() {
     const navigate = useNavigate()
     const location = useLocation()
-    const [resultats, setResultats] = useState<any[]>([])
-    const [loading, setLoading] = useState(true)
+    const [resultats, setResultats] = useState<any[]>([]) //récupérer résultats
+    const [loading, setLoading] = useState(true) //boucle chargement le temps de l'affichage
 
     useEffect(() => {
-        // Récupérer les résultats passés par la navigation
+        // récupérer les résultats passés par la navigation
         if (location.state && location.state.resultats) {
             setResultats(location.state.resultats)
             console.log("Résultats reçus:", location.state.resultats)

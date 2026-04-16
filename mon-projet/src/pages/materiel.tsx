@@ -19,10 +19,15 @@ import {
   MenuItem
 } from '@mui/material'; //import MUI
 
-function Maintenance() {
+function Materiel() {
     const navigate = useNavigate();
 
 
+    //afficher carte du campus avec localisation instruments
+    //états des instruments (panne)
+    //documentation instruments (formats de fichiers)
+    //pour les administrateurs : possibilité de modifier les instruments
+    
     return (
 
             <Box sx={{ flexGrow: 1 }}> {/*sx = prop de style de MUI
@@ -35,7 +40,7 @@ function Maintenance() {
               <Toolbar>
               
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-                  MAINTENANCE DES CAPTEURS
+                  DOCUMENTATION MATÉRIEL
                 </Typography>
                 <Button color="inherit" onClick={() => navigate('/')}>Retour</Button>
               </Toolbar>
@@ -43,4 +48,4 @@ function Maintenance() {
             </Box>
     );
 }
-export default Maintenance;
+export default Materiel;
