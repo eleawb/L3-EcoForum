@@ -34,15 +34,16 @@ function ResultatsRecherche() {
         setLoading(false)
     }, [location])
 
-    // Fonction pour exporter en CSV
+    // fonction pour exporter en CSV
     const telechargerCSV = () => {
         if (resultats.length === 0) return
         
-        // Créer l'en-tête CSV
+        // créer l'en-tête CSV
+        //a voir si ok ou pas
         const headers = ['ID', 'Date/Heure', 'Instrument', 'Modèle', 'Capteur', 'Type mesure', 'Valeur', 'Unité']
         const csvRows = [headers]
         
-        // Ajouter les données
+        // ajouter les données
         for (const row of resultats) {
             csvRows.push([
                 row.id_mesure,

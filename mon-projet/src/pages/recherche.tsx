@@ -59,8 +59,7 @@ function Recherche() {
     const [jourfin, setJourFin] = useState('')
     const [heuredeb, setHeureDeb] = useState('')
     const [heurefin, setHeureFin] = useState('')
-    const [semainedeb, setSemaineDeb] = useState('')
-    const [semainefin, setSemaineFin] = useState('')
+   
     const [moisdeb, setMoisDeb] = useState('')
     const [moisfin, setMoisFin] = useState('')
     const [anneedeb, setAnneeDeb] = useState('')
@@ -184,7 +183,7 @@ const InstrumentSelection = (valeurId: number) => {
           return [...prev, valeurId.toString()]
       }
   })
-  setSelectTout(false) //tout sélectionner pas coché
+  setSelectTout(false) //"tout sélectionner" pas coché
 }
 
   
@@ -239,10 +238,12 @@ const CocheTTselectionner = () => {
     const ttesValeurs = listeInstruments.map(item => item.nom_outil || item.modele)
     setInstrumentsSelectionnes(ttesValeurs)
     setSelectTout(true)
+    console.log("tous les instruments sont sélectionnés") 
       
   } else {
     setInstrumentsSelectionnes([])
     setSelectTout(false)
+    console.log("l'user n'a pas coché 'tout sélectionner'")
   }
   
 }
@@ -323,8 +324,8 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                 body: JSON.stringify({
                     instrumentIds: instrumentsSelectionnes,
                     choixDate: choixDate,
-                    dateDebut: jourdeb || heuredeb || semainedeb || moisdeb || anneedeb,
-                    dateFin: jourfin || heurefin || semainefin || moisfin || anneefin
+                    dateDebut: jourdeb || heuredeb || moisdeb || anneedeb,
+                    dateFin: jourfin || heurefin || moisfin || anneefin
                 })
             })
             if (response.ok){
@@ -375,6 +376,7 @@ const EnvoiDatesPrecises = () => {
         setDatesPrecises(false)
     }
 }
+
 
 
 
@@ -540,25 +542,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                     </FormGroup>
                 </Stack>
             )
-        case 'Semaine':
-            return (
-                <Stack direction="row" spacing={2} alignItems="center">
-                    <input 
-                        type="week" 
-                        value={periode.valeur.split('-')[0] || ''} 
-                        onChange={(e) => updatePeriodeValeur(periode.id, `${e.target.value}-${periode.valeur.split('-')[1] || ''}`)} 
-                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
-                        placeholder="Semaine début"
-                    />
-                    <input 
-                        type="week" 
-                        value={periode.valeur.split('-')[1] || ''} 
-                        onChange={(e) => updatePeriodeValeur(periode.id, `${periode.valeur.split('-')[0] || ''}-${e.target.value}`)} 
-                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
-                        placeholder="Semaine fin"
-                    />
-                </Stack>
-            )
+        
         case 'Mois':
             // Récupérer les mois actuels depuis periode.valeur
             const moisActuels = periode.valeur ? periode.valeur.split(',').filter(j => j !== '') : []
@@ -811,7 +795,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                     }
                                     label={
                                     <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
-                                      Je recherche des données sur des dates précises
+                                      Je recherche des données sur une ou des dates précises
                                     </Typography>
                                     }
                                     />
@@ -830,7 +814,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                     }
                                     label={
                                     <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
-                                      Je recherche des données sur des périodes générales
+                                      Je recherche des données sur un période récurrente
                                     </Typography>
                                     }
                                   />
@@ -874,19 +858,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                   Heure
                               </Button>
 
-                              <Button
-                                  variant="contained"
-                                  startIcon={<AddIcon />}
-                                  onClick={() => ajouterPeriode('Semaine')}
-                                  sx={{
-                                      bgcolor: '#0370B2',
-                                      '&:hover': { bgcolor: '#00517C' },
-                                      fontSize: '0.75rem',
-                                      py: 0.5
-                                  }}
-                              >
-                                  Semaine
-                              </Button>
+                            
                               <Button
                                   variant="contained"
                                   startIcon={<AddIcon />}
@@ -954,7 +926,6 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                     <RadioGroup row value={choixDate} onChange={(e) => setChoixDate(e.target.value)}>
                                         <FormControlLabel value="Heure" control={<Radio />} label="Heure" />
                                         <FormControlLabel value="Jour" control={<Radio />} label="Jour" />
-                                        <FormControlLabel value="Semaine" control={<Radio />} label="Semaine" />
                                         <FormControlLabel value="Mois" control={<Radio />} label="Mois" />
                                         <FormControlLabel value="Année" control={<Radio />} label="Année" />
                                     </RadioGroup>
@@ -977,13 +948,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                 </Stack>
                             )}
 
-                            {/* Semaine */}
-                            {choixDate === 'Semaine' && (
-                                <Stack direction="row" spacing={2}>
-                                    <input type="date" value={semainedeb} onChange={(e) => setSemaineDeb(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} />
-                                    <input type="date" value={semainefin} onChange={(e) => setSemaineFin(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} />
-                                </Stack>
-                            )}
+                          
 
                             {/* Mois */}
                             {choixDate === 'Mois' && (
