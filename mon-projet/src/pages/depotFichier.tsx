@@ -1,4 +1,4 @@
-import { useState } from 'react'; 
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Search as SearchIcon, Add as AddIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import {
@@ -24,150 +24,208 @@ function DepotFichier(){
     const navigate = useNavigate();
 
     const [selectedInstrument, setSelectedInstrument] = useState<string>('');
-    const [selectedCapteur, setSelectedCapteur] = useState<string>('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [showAdditionalInputs, setShowAdditionalInputs] = useState<boolean>(false);
     const [nom, setNom] = useState<string>('');
-    const [numSerie, setnumSerie] = useState<string>('');
+    const [prenom, setPrenom] = useState<string>('');
+    const [mail, setMail] = useState<string>('');
+    const [numSerie, setNumSerie] = useState<string>('');
     const [extension, setExtension] = useState<string>('');
     const [dateImport, setDateImport] = useState<string>('');
+    const [dateCueilli, setDateCueilli] = useState<string>('');
     const [typeSource, setTypeSource] = useState<string>('');
+    const [instruments, setInstrumentsDisponibles] = useState([]);
+    const [numInstrument, setNumInstrument] = useState(''); 
+    const [modele, setModele] = useState('');
 
-    const isFormComplete = selectedInstrument !== '' && selectedCapteur !== '';
+    const isFormComplete = selectedInstrument !== '' && selectedInstrument !== '';
     const areAdditionalInputsComplete = 
     nom !== '' && 
+    prenom !== '' && 
+    mail !== '' && 
     numSerie !== '' && 
     extension !== '' && 
     dateImport !== '' && 
+    dateCueilli !== '' && 
     typeSource !== '';
+/*
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+Empiezo a querer implementar la BDD
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+*/
+useEffect(() => {
+        const fetchData = async () => {
+            console.log("début du fetch data")
+            try {
+
+                const instrumentsRes = await fetch('http://localhost:3000/api/instruments')
+                const instrumentsData = await instrumentsRes.json()
+                console.log("Catégories reçues du backend:", instrumentsData) 
+                setInstrumentsDisponibles(instrumentsData || [])
+                
+            } catch (error) {
+                console.error('Erreur lors du chargement des données:', error)
+                //setChargement(false)
+            }
+        }
+        fetchData()
+    }, [])
+
+/* 
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+*/
+
+    const autoFillSerialNumber = (selectedInstrumentName: string) => {
+    // Find the instrument in your fetched data
+    const selectedInstrument = instruments.find(
+        instrument => instrument.nom_outil === selectedInstrumentName
+    );
+    
+    // If instrument found and has a serial number, set it
+    if (selectedInstrument && selectedInstrument.num_serie) {
+        setNumSerie(selectedInstrument.num_serie);
+        
+    } else {
+        // Clear the field if no instrument selected or no serial number
+        setNumSerie('');
+    }
+};
 
     const handleInstrumentChange = (event: SelectChangeEvent) => {
-      setSelectedInstrument(event.target.value);
-    };
+    const selectedValue = event.target.value;
+    setSelectedInstrument(selectedValue);
     
-    const handleCapteurChange = (event: SelectChangeEvent) => {
-      setSelectedCapteur(event.target.value);
-    };
+    // Auto-fill serial number when instrument changes
+    autoFillSerialNumber(selectedValue);
+};
 
     // Function to extract and format date from filename based on capteur type
-    const extractDateFromFilename = (fileName: string, capteurType: string): string | null => {
-      try {
-        if (capteurType === 'capteur2') { // HOBO
-          // Format: (n°02)211500372025-07-0314_20_43CEST.xlsx
-          // Date at position 15, format: YYYY-MM-DD
-          if (fileName.length >= 23) {
-            const dateStr = fileName.substring(14, 24); // Extract "2025-07-03"
-            const [year, month, day] = dateStr.split('-');
-            if (year && month && day) {
-              return `${year}-${month}-${day}`; // Already in correct format
+const extractDateFromFilename = (fileName: string, instrumentType: string): string | null => {
+    try {
+        // HOBO
+        if (instrumentType === 'HOBO') {
+            if (fileName.length >= 23) {
+                const dateStr = fileName.substring(14, 24); // Extract "2025-07-03"
+                const [year, month, day] = dateStr.split('-');
+                if (year && month && day) {
+                    return `${year}-${month}-${day}`; // Already in correct format
+                }
             }
-          }
         } 
-        else if (capteurType === 'capteur1') { // KUNAK
-          // Format: K-A3 CLEAN AIR EUR 12 reads 2025-12-01 00_00_00 to 2025-12-31 23_59_59 (2).csv
-          // Look for pattern YYYY-MM-DD
-          const datePattern = /(\d{4}-\d{2}-\d{2})/g;
-          const matches = fileName.match(datePattern);
-          if (matches && matches.length >= 2) {
-            // Take the second date (end date)
-            const endDate = matches[1];
-            const [year, month, day] = endDate.split('-');
-            if (year && month && day) {
-              return `${year}-${month}-${day}`;
+        // KUNAK
+        else if (instrumentType === 'KUNAK') {
+            const datePattern = /(\d{4}-\d{2}-\d{2})/g;
+            const matches = fileName.match(datePattern);
+            if (matches && matches.length >= 2) {
+                // Take the second date (end date)
+                const endDate = matches[1];
+                const [year, month, day] = endDate.split('-');
+                if (year && month && day) {
+                    return `${year}-${month}-${day}`;
+                }
             }
-          }
         } 
-        else if (capteurType === 'capteur3') { // Station Meteo
-          // Format: te-2024-04-2025-03-17.xls
-          // Extract last date pattern YYYY-MM-DD
-          const datePattern = /(\d{4}-\d{2}-\d{2})/g;
-          const matches = fileName.match(datePattern);
-          if (matches && matches.length > 0) {
-            // Take the last date in the filename
-            const lastDate = matches[matches.length - 1];
-            const [year, month, day] = lastDate.split('-');
-            if (year && month && day) {
-              return `${year}-${month}-${day}`;
+        // STATIONMETEO (Station Meteo)
+        else if (instrumentType === 'STATIONMETEO') {
+            const datePattern = /(\d{4}-\d{2}-\d{2})/g;
+            const matches = fileName.match(datePattern);
+            if (matches && matches.length > 0) {
+                // Take the last date in the filename
+                const lastDate = matches[matches.length - 1];
+                const [year, month, day] = lastDate.split('-');
+                if (year && month && day) {
+                    return `${year}-${month}-${day}`;
+                }
             }
-          }
         } 
-        else if (capteurType === 'capteur4') { // TSM4
-          // Format: data_95224601_2024_11_19_0
-          // Pattern: YYYY_MM_DD
-          const pattern = /(\d{4})_(\d{2})_(\d{2})/;
-          const match = fileName.match(pattern);
-          if (match) {
-            const year = match[1];
-            const month = match[2];
-            const day = match[3];
-            return `${year}-${month}-${day}`;
-          }
+        // TSM4
+        else if (instrumentType === 'TSM4') {
+            const pattern = /(\d{4})_(\d{2})_(\d{2})/;
+            const match = fileName.match(pattern);
+            if (match) {
+                const year = match[1];
+                const month = match[2];
+                const day = match[3];
+                return `${year}-${month}-${day}`;
+            }
         }
+        const genericPattern = /(\d{4}-\d{2}-\d{2})/;
+        const genericMatch = fileName.match(genericPattern);
+        if (genericMatch) {
+            return genericMatch[1];
+        }
+        
         return null;
-      } catch (error) {
+    } catch (error) {
         console.error('Error extracting date:', error);
         return null;
-      }
-    };
+    }
+};
 
-    const autoFillCapteurFromFile = (fileName: string) => {
-      if (fileName.includes('K-')) {
-        setSelectedCapteur('capteur1'); // KUNAK
-        // Extract and set date for KUNAK
-        const extractedDate = extractDateFromFilename(fileName, 'capteur1');
-        if (extractedDate) {
-          setDateImport(extractedDate);
+
+
+      const autoFillInstrumentFromFile = (fileName: string) => {
+    // Detection logic
+    let detectedInstrument = null;
+    
+    if (fileName.includes('K-') || fileName.includes('K-A3')) {
+        detectedInstrument = 'KUNAK';
+    } else if (fileName.includes('(n°')) {
+        detectedInstrument = 'HOBO';
+    } else if (fileName.includes('te-')) {
+        detectedInstrument = 'STATIONMETEO';
+    } else if (fileName.includes('data_')) {
+        detectedInstrument = 'TSM4';
+    }
+    
+    if (detectedInstrument) {
+        setSelectedInstrument(detectedInstrument);
+        
+        // Auto-fill serial number and other details
+        const instrument = instruments.find(i => i.nom_outil === detectedInstrument);
+        if (instrument) {
+            setNumSerie(instrument.num_serie || '');
+            setNumInstrument(instrument.num_instrument?.toString() || '');
+            setModele(instrument.modele || '');
+            
         }
-      } else if (fileName.includes('(n°')) {
-        setSelectedCapteur('capteur2'); // HOBO
-        // Extract and set date for HOBO
-        const extractedDate = extractDateFromFilename(fileName, 'capteur2');
+        
+        // Extract date as before
+        const extractedDate = extractDateFromFilename(fileName, detectedInstrument);
         if (extractedDate) {
-          setDateImport(extractedDate);
+            setDateCueilli(extractedDate);
         }
-      } else if (fileName.includes('te-')) {
-        setSelectedCapteur('capteur3'); // Station Meteo
-        // Extract and set date for Station Meteo
-        const extractedDate = extractDateFromFilename(fileName, 'capteur3');
-        if (extractedDate) {
-          setDateImport(extractedDate);
-        }
-      } else if (fileName.includes('data_')) {
-        setSelectedCapteur('capteur4'); // TSM4
-        // Extract and set date for TSM4
-        const extractedDate = extractDateFromFilename(fileName, 'capteur4');
-        if (extractedDate) {
-          setDateImport(extractedDate);
-        }
-      }
-    };
+    }
+};
+
+
+
 
     const handleFileUpload = () => {
       const fileInput = document.createElement('input');
       fileInput.type = 'file';
-      fileInput.accept = '.csv, .txt, .json, .xlsx, .xls';
-      
       fileInput.onchange = (e: Event) => {
         const target = e.target as HTMLInputElement;
         if (target.files && target.files.length > 0) {
           const file = target.files[0];
           setSelectedFile(file);
           setShowAdditionalInputs(true);
-          autoFillCapteurFromFile(file.name);
+          autoFillInstrumentFromFile(file.name);
+          handleAutofillExtension(file);
         }
       };  
       fileInput.click();
-    };
+  };
 
-    const handleAutofillExtension = () => {
-      if (selectedFile && selectedFile.name.includes('.')) {
-        const extensionPart = selectedFile.name.split('.').pop() || '';
-        setExtension(extensionPart);
-      } else if (selectedFile) {
-        setExtension('');
-        alert('Le fichier sélectionné n\'a pas d\'extension');
-      }
-    };
+    const handleAutofillExtension = (file: File) => {
+    if (file && file.name.includes('.')) {
+      const extensionPart = file.name.split('.').pop() || '';
+      setExtension(extensionPart);
+    } else if (file) {
+      setExtension('');
+      alert('Le fichier sélectionné n\'a pas d\'extension');
+    }
+};
     
     const handleAutofillDate = () => {
       const today = new Date();
@@ -196,11 +254,13 @@ function DepotFichier(){
       
       console.log('Uploading file:', selectedFile.name);
       console.log('Instrument:', selectedInstrument);
-      console.log('Capteur:', selectedCapteur);
       console.log('Nom:', nom);
+      console.log('Prenom:', prenom);
+      console.log('Mail:', mail);
       console.log('Numéro de série:', numSerie);
       console.log('Extension:', extension);
-      console.log('Date import:', dateImport);
+      console.log('Date Import:',dateImport);
+      console.log('Date Cueilli:', dateCueilli);
       console.log('Type source:', typeSource);
       
       alert(`Fichier "${selectedFile.name}" prêt à être uploadé`);
@@ -243,31 +303,23 @@ function DepotFichier(){
 
                 {showAdditionalInputs && (
                   <>
-                    <FormControl fullWidth required>
-                      <InputLabel>Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier</InputLabel>
-                      <Select
-                        value={selectedInstrument}
-                        onChange={handleInstrumentChange}
-                        label="Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier"
-                      >
-                        <MenuItem value="instrument1">Capteur 1</MenuItem>
-                        <MenuItem value="instrument2">Capteur 2</MenuItem>
-                        <MenuItem value="instrument3">Capteur 3</MenuItem>
-                      </Select>
-                    </FormControl>
 
                     <FormControl fullWidth required>
-                      <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
-                      <Select
-                        value={selectedCapteur}
-                        onChange={handleCapteurChange}
-                        label="Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier"
-                      >
-                        <MenuItem value="capteur1">KUNAK</MenuItem>
-                        <MenuItem value="capteur2">HOBO</MenuItem>
-                        <MenuItem value="capteur3">Station Meteo</MenuItem>
-                        <MenuItem value="capteur4">TSM4</MenuItem>
-                      </Select>
+                        <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
+                        <Select
+                            value={selectedInstrument} 
+                            onChange={handleInstrumentChange}
+                            label="Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier"
+                        >
+                            {instruments.map((instrument) => (
+                                <MenuItem 
+                                    key={instrument.id_instrument} 
+                                    value={instrument.nom_outil}
+                                >
+                                    {instrument.nom_outil}
+                                </MenuItem>
+                            ))}
+                        </Select>
                     </FormControl>
                       
                     <TextField
@@ -279,16 +331,34 @@ function DepotFichier(){
                       onChange={(e) => setNom(e.target.value)}
                       placeholder="Entrez votre nom"
                     />
-                    
                     <TextField
-                      label="Numero de serie"
+                      label="Prenom"
                       variant="outlined"
                       fullWidth
                       required
-                      value={numSerie}
-                      onChange={(e) => setnumSerie(e.target.value)}
-                      placeholder="Entrez le numero de serie"
+                      value={prenom}
+                      onChange={(e) => setPrenom(e.target.value)}
+                      placeholder="Entrez votre prenom"
                     />
+                    <TextField
+                      label="Mail"
+                      variant="outlined"
+                      fullWidth
+                      required
+                      value={mail}
+                      onChange={(e) => setMail(e.target.value)}
+                      placeholder="Entrez votre eMail"
+                    />
+                    
+                    <TextField
+                          label="Numero de serie"
+                          variant="outlined"
+                          fullWidth
+                          required
+                          value={numSerie}
+                          onChange={(e) => setNumSerie(e.target.value)}
+                          placeholder="Entrez le numero de serie"
+                      />
                   
                     <Stack direction="row" spacing={2} alignItems="center">
                       <TextField
@@ -300,16 +370,20 @@ function DepotFichier(){
                         onChange={(e) => setExtension(e.target.value)}
                         placeholder="Extension du fichier"
                       />
-                      <Button
-                        type="button"
-                        variant="outlined"
-                        onClick={handleAutofillExtension}
-                        sx={{ minWidth: '100px', height: '56px' }}
-                      >
-                        Autofill
-                      </Button>
                     </Stack>
-                  
+                    
+                  <Stack direction="row" spacing={2} alignItems="center">
+                      <TextField
+                        label="Date Cuilli"
+                        type="date"
+                        variant="outlined"
+                        fullWidth
+                        required
+                        value={dateCueilli}
+                        onChange={(e) => setDateCueilli(e.target.value)}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    </Stack>
                     <Stack direction="row" spacing={2} alignItems="center">
                       <TextField
                         label="Date import"
