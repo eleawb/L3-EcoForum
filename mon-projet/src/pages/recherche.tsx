@@ -53,7 +53,12 @@ function Recherche() {
       const [joursSemaine, setJoursSemaine] = useState<string[]>([]) // alors, états pour les jours de la semaine
       const [periodesAjoutees, setPeriodesAjoutees] = useState<Array<{id: string, type: string, valeur: string}>>([]) //états pour gérer les sélections d'heure, jour, mois ou semaine
       const [heuresPlages, setHeuresPlages] = useState<Array<{id: string, debut: string, fin: string}>>([]) // etat pour stock les différentes plages horaires choisies
+    // années sélectionnées
+  const [anneesSelectionnees, setAnneesSelectionnees] = useState<string[]>([])
+  // liste des années disponibles 
+  const [anneesDisponibles, setAnneesDisponibles] = useState<string[]>([])
 
+      
     const [choixDate, setChoixDate] = useState('')
     const [jourdeb, setJourDeb] = useState('')
     const [jourfin, setJourFin] = useState('')
@@ -235,15 +240,14 @@ const affichageCategoriesNiveaux = (categorie: any, profondeur: number) => {
 //gestion du tt sélectionner
 const CocheTTselectionner = () => {
   if (!selectTout) {
-    const ttesValeurs = listeInstruments.map(item => item.nom_outil || item.modele)
+    const ttesValeurs = listeInstruments.map(item => item.id_instrument.toString())
     setInstrumentsSelectionnes(ttesValeurs)
     setSelectTout(true)
-    console.log("tous les instruments sont sélectionnés") 
+    console.log("tous les instruments sont sélectionnés")
       
   } else {
     setInstrumentsSelectionnes([])
     setSelectTout(false)
-    console.log("l'user n'a pas coché 'tout sélectionner'")
   }
   
 }
@@ -325,14 +329,16 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                     instrumentIds: instrumentsSelectionnes,
                     choixDate: choixDate,
                     dateDebut: jourdeb || heuredeb || moisdeb || anneedeb,
-                    dateFin: jourfin || heurefin || moisfin || anneefin
-                })
+                    dateFin: jourfin || heurefin || moisfin || anneefin,
+                    anneesSelectionnees: anneesSelectionnees
+                  })
             })
             if (response.ok){
-            const resultats = await response.json()
-            console.log('Résultats de la recherche:', resultats)
+            const data = await response.json()
+            console.log('Résultats de la recherche:', data)
             //on va sur la page d'affichage des données
-            navigate('/resultatsRecherche', { state: { resultats: resultats } })
+            navigate('/resultatsRecherche', { state: { previewResultats: data.previewResultats,
+                resultats: data.resultats} }) //preview de 20 résultats mais téléchargement de tous
 
             }else {
               alert('Erreur lors de la recherche')
@@ -389,6 +395,7 @@ const ajouterPeriode = (type: string) => {
         valeur: ''
     }
     setPeriodesAjoutees([...periodesAjoutees, nouvellePeriode])
+    
 }
 
 // Fonction pour supprimer une période
@@ -425,7 +432,35 @@ const updateHeure = (id: string, champ: 'debut' | 'fin', valeur: string) => {
   ))
 }
 
+// Générer la liste des années de 2020 à année actuelle
+useEffect(() => {
+  const anneeActuelle = new Date().getFullYear()
+  const annees = []
+  for (let i = 2020; i <= anneeActuelle + 1; i++) {
+      annees.push(i.toString())
+  }
+  setAnneesDisponibles(annees)
+}, [])
 
+// Gestion de la sélection des années
+const handleAnneeChange = (annee: string) => {
+  setAnneesSelectionnees(prev => {
+      if (prev.includes(annee)) {
+          return prev.filter(a => a !== annee)
+      } else {
+          return [...prev, annee]
+      }
+  })
+}
+
+// tt sélectionner pour les années
+const selectToutAnnees = () => {
+  if (anneesSelectionnees.length === anneesDisponibles.length) {
+      setAnneesSelectionnees([])
+  } else {
+      setAnneesSelectionnees([...anneesDisponibles])
+  }
+}
 
 // Rendu conditionnel pour chaque type de période
 const renderPeriodeInput = (periode: {id: string, type: string, valeur: string}) => {
@@ -593,32 +628,88 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                 </Stack>
             )
         case 'Année':
-            return (
-                <Stack direction="row" spacing={2} alignItems="center">
-                    <input 
-                        type="number" 
-                        value={periode.valeur.split('-')[0] || ''} 
-                        onChange={(e) => updatePeriodeValeur(periode.id, `${e.target.value}-${periode.valeur.split('-')[1] || ''}`)} 
-                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
-                        placeholder="Année début"
-                        min="1900"
-                        max="2100"
-                    />
-                    <input 
-                        type="number" 
-                        value={periode.valeur.split('-')[1] || ''} 
-                        onChange={(e) => updatePeriodeValeur(periode.id, `${periode.valeur.split('-')[0] || ''}-${e.target.value}`)} 
-                        style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
-                        placeholder="Année fin"
-                        min="1900"
-                        max="2100"
-                    />
-                </Stack>
-            )
-        default:
-            return null
-    }
-};
+          const toutesAnneesSelectionnees = anneesSelectionnees.length === anneesDisponibles.length && anneesDisponibles.length > 0 
+          return (
+          <Box>
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+              <FormControlLabel
+                  control={
+                      <Checkbox
+                          checked={toutesAnneesSelectionnees}
+                          onChange={selectToutAnnees}
+                          size="small"
+                      />
+                  }
+                  label={
+                      <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
+                          Tout sélectionner
+                      </Typography>
+                  }
+              />
+              <Typography variant="caption" sx={{ color: '#666' }}>
+                  ({anneesDisponibles.length} années disponibles)
+              </Typography>
+          </Stack>
+          
+          <Box sx={{ 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: 1,
+              maxHeight: 150,
+              overflow: 'auto',
+              border: '1px solid #e0e0e0',
+              borderRadius: 1,
+              p: 1
+          }}>
+              {anneesDisponibles.map((annee) => (
+                  <FormControlLabel
+                      key={annee}
+                      control={
+                          <Checkbox
+                              checked={anneesSelectionnees.includes(annee)}
+                              onChange={() => handleAnneeChange(annee)}
+                              size="small"
+                          />
+                      }
+                      label={annee}
+                      sx={{ width: 'calc(25% - 8px)', m: 0 }}
+                  />
+              ))}
+          </Box>
+          
+          {/* Option pour une année spécifique en input */}
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 2 }}>
+              <input 
+                  type="number" 
+                  value={periode.valeur.split('-')[0] || ''} 
+                  onChange={(e) => updatePeriodeValeur(periode.id, `${e.target.value}-${periode.valeur.split('-')[1] || ''}`)} 
+                  style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                  placeholder="Année début"
+                  min="2020"
+                  max={new Date().getFullYear() + 2}
+              />
+              <Typography variant="body2">à</Typography>
+              <input 
+                  type="number" 
+                  value={periode.valeur.split('-')[1] || ''} 
+                  onChange={(e) => updatePeriodeValeur(periode.id, `${periode.valeur.split('-')[0] || ''}-${e.target.value}`)} 
+                  style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
+                  placeholder="Année fin"
+                  min="2020"
+                  max={new Date().getFullYear() + 2}
+              />
+              
+          </Stack>
+          
+      </Box>
+           
+          )
+          default : 
+          return null
+                    }
+                }
+    
+
 
     return (
         <Box sx={{ flexGrow: 1 }}>
@@ -814,7 +905,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                     }
                                     label={
                                     <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
-                                      Je recherche des données sur un période récurrente
+                                      Je recherche des données sur une période récurrente
                                     </Typography>
                                     }
                                   />
@@ -832,6 +923,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
 
                               <Button
                                   variant="contained"
+                                  id="BoutonJour"
                                   startIcon={<AddIcon />}
                                   onClick={() => ajouterPeriode('Jour')}
                                   sx={{
@@ -846,6 +938,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
 
                               <Button
                                   variant="contained"
+                                  id="BoutonHeure"
                                   startIcon={<AddIcon />}
                                   onClick={() => ajouterPeriode('Heure')}
                                   sx={{
@@ -861,6 +954,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                             
                               <Button
                                   variant="contained"
+                                  id="BoutonMois"
                                   startIcon={<AddIcon />}
                                   onClick={() => ajouterPeriode('Mois')}
                                   sx={{
@@ -874,6 +968,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                               </Button>
                               <Button
                                   variant="contained"
+                                  id="BoutonAnnee"
                                   startIcon={<AddIcon />}
                                   onClick={() => ajouterPeriode('Année')}
                                   sx={{

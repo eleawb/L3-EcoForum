@@ -22,14 +22,25 @@ import {
 function ResultatsRecherche() {
     const navigate = useNavigate()
     const location = useLocation()
-    const [resultats, setResultats] = useState<any[]>([]) //récupérer résultats
+    const [previewResultats, setPreviewResultats] = useState<any[]>([]) //récupérer les 20 résultats de preview
+    const [entetes, setEntetes] = useState<any[]>([]) //récupérer les entêtes colonnes du fichier
+    const [resultats, setResultats] = useState<any[]>([]) //récupérer tous les résultats
     const [loading, setLoading] = useState(true) //boucle chargement le temps de l'affichage
 
     useEffect(() => {
         // récupérer les résultats passés par la navigation
-        if (location.state && location.state.resultats) {
-            setResultats(location.state.resultats)
-            console.log("Résultats reçus:", location.state.resultats)
+        if (location.state) {
+            setPreviewResultats(location.state.previewResultats || [])
+            setResultats(location.state.resultats||[])
+            setEntetes(location.state.entetes||[])
+            console.log("Résultats reçus:", location.state.previewResultats?.length||0, "affichés en preview sur les", location.state.resultats?.length||0, "totaux") //si résultats undefined, ça bug donc mettre à 0
+            console.log("Entêtes des colonnes :", location.state.entetes)
+        }
+        else {
+            console.log("Aucun résultat récupéré dans location.state")
+            setResultats([])
+            setPreviewResultats([])
+            setEntetes([])
         }
         setLoading(false)
     }, [location])
@@ -37,24 +48,13 @@ function ResultatsRecherche() {
     // fonction pour exporter en CSV
     const telechargerCSV = () => {
         if (resultats.length === 0) return
-        
-        // créer l'en-tête CSV
-        //a voir si ok ou pas
-        const headers = ['ID', 'Date/Heure', 'Instrument', 'Modèle', 'Capteur', 'Type mesure', 'Valeur', 'Unité']
-        const csvRows = [headers]
-        
+        const colonnes = Object.keys(resultats[0])
+        const csvRows = [entetes]
+
         // ajouter les données
-        for (const row of resultats) {
-            csvRows.push([
-                row.id_mesure,
-                new Date(row.date_heure).toLocaleString(),
-                row.instrument,
-                row.modele,
-                row.capteur,
-                row.type_mesure,
-                row.valeur_mesure,
-                row.unite_mesure
-            ])
+        for (const row of resultats) { //ou previewResultats ?
+            const ligne = entetes.map(col => row[col] || '')
+            csvRows.push(ligne)
         }
         
         // Télécharger le fichier
@@ -69,6 +69,9 @@ function ResultatsRecherche() {
         document.body.removeChild(link)
         URL.revokeObjectURL(url)
     }
+
+    // Récupérer les colonnes depuis le premier résultat
+    const colonnes = previewResultats.length > 0 ? Object.keys(previewResultats[0]) : []
 
     return (
         <Box sx={{ flexGrow: 1 }}>
@@ -116,25 +119,22 @@ function ResultatsRecherche() {
                            
                             <TableContainer component={Paper} sx={{ maxHeight: 500 }}>
                                 <Table stickyHeader size="small">
-                                    <TableHead>
+                                    {/*<TableHead>
                                         <TableRow>
-                                            <TableCell><b>Date/Heure</b></TableCell>
-                                            <TableCell><b>Instrument</b></TableCell>
-                                            <TableCell><b>Capteur</b></TableCell>
-                                            <TableCell><b>Type mesure</b></TableCell>
-                                            <TableCell align="right"><b>Valeur</b></TableCell>
-                                            <TableCell><b>Unité</b></TableCell>
+                                            {entetes.map((col, index)=>(
+                                                <TableCell key={index}><b>{col}</b></TableCell>
+                                            ))}
                                         </TableRow>
-                                    </TableHead>
+                                            </TableHead>*/}
                                     <TableBody>
-                                        {resultats.map((row, idx) => (
+                                        {previewResultats.map((row, idx) => (
                                             <TableRow key={idx} hover>
-                                                <TableCell>{new Date(row.date_heure).toLocaleString()}</TableCell>
-                                                <TableCell>{row.instrument}</TableCell>
-                                                <TableCell>{row.capteur}</TableCell>
-                                                <TableCell>{row.type_mesure}</TableCell>
-                                                <TableCell align="right">{row.valeur_mesure}</TableCell>
-                                                <TableCell>{row.unite_mesure}</TableCell>
+                                                {colonnes.map((col,colIdx)=>(
+                                                    <TableCell key={`${idx}-${colIdx}`}>
+                                                    {typeof row[col] === 'object' ? JSON.stringify(row[col]) : row[col]}
+                                                </TableCell>
+                                                ))}
+
                                             </TableRow>
                                         ))}
                                     </TableBody>
