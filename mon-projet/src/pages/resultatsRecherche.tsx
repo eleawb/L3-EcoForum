@@ -7,6 +7,7 @@ import {
   Typography,
   Button,
   Container,
+  Checkbox,
   Box,
   Paper,
   Stack,
@@ -16,44 +17,75 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  CircularProgress
+  CircularProgress,
+  FormControlLabel
 } from '@mui/material'
 
 function ResultatsRecherche() {
     const navigate = useNavigate()
     const location = useLocation()
-    const [previewResultats, setPreviewResultats] = useState<any[]>([]) //récupérer les 20 résultats de preview
-    const [entetes, setEntetes] = useState<any[]>([]) //récupérer les entêtes colonnes du fichier
+    const [previewResultats, setPreviewResultats] = useState<any[]>([]) //récupérer les 20 résultats pour la preview
     const [resultats, setResultats] = useState<any[]>([]) //récupérer tous les résultats
-    const [loading, setLoading] = useState(true) //boucle chargement le temps de l'affichage
+    const [loading, setLoading] = useState(true) //boucle de chargement le temps de l'affichage
+    
+    const [colonnes, setColonnes] = useState<any[]>([]) //récupérer les colonnes
+    const [colonnesSelectionnees, setColonnesSelectionnees] = useState<Set<string>>(new Set()) //récupérer le choix des colonnes que l'user souhaite garder
 
     useEffect(() => {
         // récupérer les résultats passés par la navigation
         if (location.state) {
             setPreviewResultats(location.state.previewResultats || [])
             setResultats(location.state.resultats||[])
-            setEntetes(location.state.entetes||[])
+
+            //debugs
             console.log("Résultats reçus:", location.state.previewResultats?.length||0, "affichés en preview sur les", location.state.resultats?.length||0, "totaux") //si résultats undefined, ça bug donc mettre à 0
             console.log("Entêtes des colonnes :", location.state.entetes)
-        }
-        else {
+        
+            // récupérer les colonnes depuis le 1er résultat
+            if (location.state.previewResultats && location.state.previewResultats.length > 0) {
+                const cols = Object.keys(location.state.previewResultats[0])
+                setColonnes(cols)
+                // toutes les colonnes sélectionnées par défaut
+                setColonnesSelectionnees(new Set(cols))
+            }
+        } else {
             console.log("Aucun résultat récupéré dans location.state")
-            setResultats([])
+            setResultats([]) //réinitialiser
             setPreviewResultats([])
-            setEntetes([])
         }
         setLoading(false)
     }, [location])
 
+        // gérer sélection/désélection d'une colonne
+        const ColonneChange = (colonne: string) => {
+            const nvSelection = new Set(colonnesSelectionnees)
+            if (nvSelection.has(colonne)) { 
+                nvSelection.delete(colonne)
+            } else {
+                nvSelection.add(colonne)
+            }
+            setColonnesSelectionnees(nvSelection)
+        }
+    
+        // sélection/désélection de toutes les colonnes
+        const SelectTout = () => {
+            if (colonnesSelectionnees.size === colonnes.length) {
+                setColonnesSelectionnees(new Set())
+            } else {
+                setColonnesSelectionnees(new Set(colonnes))
+            }
+        }
+
     // fonction pour exporter en CSV
     const telechargerCSV = () => {
         if (resultats.length === 0) return
-        const colonnes = Object.keys(resultats[0])
-        const csvRows = [entetes]
+
+        const colonnesAAfficher = Array.from(colonnesSelectionnees)
+        const csvRows = [colonnesAAfficher]
 
         // ajouter les données
         for (const row of resultats) { //ou previewResultats ?
-            const ligne = entetes.map(col => row[col] || '')
+            const ligne = colonnesAAfficher.map(col => row[col] || '')
             csvRows.push(ligne)
         }
         
@@ -70,8 +102,7 @@ function ResultatsRecherche() {
         URL.revokeObjectURL(url)
     }
 
-    // Récupérer les colonnes depuis le premier résultat
-    const colonnes = previewResultats.length > 0 ? Object.keys(previewResultats[0]) : []
+    const colonnesAAfficher = Array.from(colonnesSelectionnees)
 
     return (
         <Box sx={{ flexGrow: 1 }}>
@@ -117,24 +148,56 @@ function ResultatsRecherche() {
                         </Typography>
                         
                            
-                            <TableContainer component={Paper} sx={{ maxHeight: 500 }}>
+                            {/* Checkboxes pour choisir les colonnes */}
+                            <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+                                <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={colonnesSelectionnees.size === colonnes.length && colonnes.length > 0}
+                                                onChange={SelectTout}
+                                                size="small"
+                                            />
+                                        }
+                                        label={
+                                            <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
+                                              Tout sélectionner
+                                            </Typography>
+                                            }
+                                    />
+                                    {colonnes.map((col) => (
+                                        <FormControlLabel
+                                            key={col}
+                                            control={
+                                                <Checkbox
+                                                    checked={colonnesSelectionnees.has(col)}
+                                                    onChange={() => ColonneChange(col)}
+                                                    size="small"
+                                                />
+                                            }
+                                            label={col}
+                                        />
+                                    ))}
+                                </Stack>
+                            </Paper>
+                            
+                            <TableContainer component={Paper} sx={{ maxHeight: 500, overflowX: 'auto' }}>
                                 <Table stickyHeader size="small">
-                                    {/*<TableHead>
+                                    <TableHead>
                                         <TableRow>
-                                            {entetes.map((col, index)=>(
+                                            {colonnesAAfficher.map((col, index) => (
                                                 <TableCell key={index}><b>{col}</b></TableCell>
                                             ))}
                                         </TableRow>
-                                            </TableHead>*/}
+                                    </TableHead>
                                     <TableBody>
                                         {previewResultats.map((row, idx) => (
                                             <TableRow key={idx} hover>
-                                                {colonnes.map((col,colIdx)=>(
+                                                {colonnesAAfficher.map((col, colIdx) => (
                                                     <TableCell key={`${idx}-${colIdx}`}>
-                                                    {typeof row[col] === 'object' ? JSON.stringify(row[col]) : row[col]}
-                                                </TableCell>
+                                                        {typeof row[col] === 'object' ? JSON.stringify(row[col]) : row[col]}
+                                                    </TableCell>
                                                 ))}
-
                                             </TableRow>
                                         ))}
                                     </TableBody>
