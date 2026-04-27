@@ -89,7 +89,7 @@ app.post('/api/instruments/by-categories', async (req, res) => {
     }
 })
 
-
+/*
 // Route pour chercher les résultats
 app.post('/api/recherche', async (req, res) => {
     const { instrumentIds, choixDate, dateDebut, dateFin } = req.body
@@ -149,6 +149,136 @@ app.post('/api/recherche', async (req, res) => {
             resultats: resultats,
             previewResultats: previewResultats,
         })
+    } catch (err) {
+        console.error('Erreur:', err.message)
+        res.status(500).json({ error: err.message })
+    }
+})
+*/
+
+// Route pour chercher les résultats
+app.post('/api/recherche', async (req, res) => {
+    const { instrumentIds, choixDate, dateDebut, dateFin } = req.body
+    console.log("Recherche pour ids instrument:", instrumentIds)
+
+    try {
+        const idsNumbers = instrumentIds.map(id => parseInt(id, 10))
+        
+        //on recupere la structure du fichier (nom_colonnes et colonnes_a_traiter) pour le premier instrument
+        const structureQuery = `
+            SELECT sf.nom_colonnes, sf.colonnes_a_traiter
+            FROM instrument_mesure i
+            JOIN structure_fichier sf ON sf.id_structure = i.id_structure
+            WHERE i.id_instrument = ANY($1::int[])
+            LIMIT 1
+        `
+        const structureResult = await client.query(structureQuery, [idsNumbers]) //stocker les donnéesde structure
+        
+        let entetes = []
+        if (structureResult.rows.length > 0 && structureResult.rows[0].nom_colonnes) {
+            // on separe par ';' pour avoir chaque colonne
+            let nomColonnes = structureResult.rows[0].nom_colonnes.split(';')
+            
+            // pour chaque colonne, on prend le premier nom (avant '||') si plusieurs possibilités
+            nomColonnes = nomColonnes.map(col => {
+                if (col.includes('||')) {
+                    return col.split('||')[0] // ou une logique pour choisir selon la langue
+                }
+                return col
+            })
+            
+            // on filtre selon colonnes_a_traiter (1 = à prendre, 0 = à ignorer)
+            if (structureResult.rows[0].colonnes_a_traiter) {
+                const aTraiter = structureResult.rows[0].colonnes_a_traiter.split(';').map(c => parseInt(c))
+                entetes = nomColonnes.filter((_, index) => aTraiter[index] === 1)
+                
+            } else {
+                entetes = nomColonnes
+            }
+        } /*else {
+            // si pas de structure, on met des noms par défaut
+            entetes = ['date_heure', 'valeur_mesure', 'instrument']
+        }*/
+        
+        console.log("Entêtes calculées:", entetes)
+        
+        // recuperer les mesures
+        let query = `
+            SELECT 
+                m.id_mesure,
+                m.valeur_mesure,
+                m.date_heure,
+                m.description_mesure,
+                i.nom_outil as instrument,
+                i.modele,
+                i.num_instrument,
+                cg.description as capteur,
+                vm.type_mesure,
+                vm.unite_mesure
+            FROM mesure m
+            JOIN serie_temporelle st ON st.id_st = m.id_st
+            JOIN capteur_generique cg ON cg.id_capteur_generique = st.id_capteur_gen
+            JOIN capteur c ON c.id_capteur = cg.id_capteur_generique
+            JOIN instrument_mesure i ON i.id_instrument = c.id_instrument
+            JOIN variable_mesuree vm ON vm.id_variable_mesuree = st.id_variable_mesuree
+            WHERE i.id_instrument = ANY($1::int[])
+        `
+        
+        let params = [idsNumbers]
+        
+        if (dateDebut && dateFin) {
+            query += ` AND m.date_heure BETWEEN $2 AND $3`
+            params.push(dateDebut, dateFin)
+        }
+        
+        query += ` ORDER BY m.date_heure ASC LIMIT 100`
+        
+        const result = await client.query(query, params)
+        if (entetes.length === 0) {
+            // Pas d'entêtes : on envoie les données brutes telles quelles
+            resultats = result.rows.map(row => ({
+                date_heure: row.date_heure ? new Date(row.date_heure).toLocaleString() : '-',
+                valeur_mesure: row.valeur_mesure,
+                instrument: row.instrument,
+                capteur: row.capteur,
+                type_mesure: row.type_mesure,
+                unite_mesure: row.unite_mesure
+            }))
+        } else {
+            // Avec entêtes : on transforme selon le mapping
+            resultats = result.rows.map(row => {
+                const nouvelleLigne = {}
+                entetes.forEach(col => {
+                    if (col.toLowerCase().includes('date')) {
+                        nouvelleLigne[col] = row.date_heure ? new Date(row.date_heure).toLocaleString() : '-'
+                    } 
+                    else if (col.toLowerCase().includes('temp') || col.toLowerCase().includes('valeur')) {
+                        nouvelleLigne[col] = row.valeur_mesure
+                    }
+                    else if (col.toLowerCase().includes('instrument')) {
+                        nouvelleLigne[col] = row.instrument
+                    }
+                    else if (col.toLowerCase().includes('capteur')) {
+                        nouvelleLigne[col] = row.capteur
+                    }
+                    else {
+                        nouvelleLigne[col] = row[col] || '-'
+                    }
+                })
+                return nouvelleLigne
+            })
+        }
+        
+        const previewResultats = resultats.slice(0, 20)
+        
+        console.log(`${resultats.length} résultats trouvés`)
+        
+        res.json({
+            resultats: resultats,
+            previewResultats: previewResultats,
+            entetes: entetes
+        })
+        
     } catch (err) {
         console.error('Erreur:', err.message)
         res.status(500).json({ error: err.message })

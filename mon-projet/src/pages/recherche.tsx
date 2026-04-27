@@ -338,7 +338,7 @@ const renderCategoryTree = (categorie: any, depth: number) => {
             console.log('Résultats de la recherche:', data)
             //on va sur la page d'affichage des données
             navigate('/resultatsRecherche', { state: { previewResultats: data.previewResultats,
-                resultats: data.resultats} }) //preview de 20 résultats mais téléchargement de tous
+                resultats: data.resultats, entetes : data.entetes} }) //preview de 20 résultats mais téléchargement de tous
 
             }else {
               alert('Erreur lors de la recherche')

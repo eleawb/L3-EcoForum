@@ -43,7 +43,10 @@ function ResultatsRecherche() {
         
             // récupérer les colonnes depuis le 1er résultat
             if (location.state.previewResultats && location.state.previewResultats.length > 0) {
-                const cols = Object.keys(location.state.previewResultats[0])
+                // On récupère les colonnes directement depuis les données
+                const cols = location.state.previewResultats && location.state.previewResultats.length > 0 
+                ? Object.keys(location.state.previewResultats[0]) 
+                : []
                 setColonnes(cols)
                 // toutes les colonnes sélectionnées par défaut
                 setColonnesSelectionnees(new Set(cols))
