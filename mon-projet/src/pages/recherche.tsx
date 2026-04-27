@@ -48,18 +48,27 @@ function Recherche() {
     // méthodes de datation
     //si choix dates précises
     const [datesPrecises, setDatesPrecises] = useState(false)
+    const [datesPrecisesAjoutees, setDatesPrecisesAjoutees] = useState<Array<{id: string, type: string, valeur: string}>>([])
+    const [heuresPrecisesPlages, setHeuresPrecisesPlages] = useState<Array<{id: string, debut: string, fin: string}>>([])
+    const [jourDejaAjoute, setJourDejaAjoute] = useState(false) //on ne peut cliquer qu'une fois sur "jour(s)" car pas une plage journalière
+
     //si choix périodes temporelles
     const [periodesTemp, setPeriodesTemp] = useState(false) 
       const [joursSemaine, setJoursSemaine] = useState<string[]>([]) // alors, états pour les jours de la semaine
       const [periodesAjoutees, setPeriodesAjoutees] = useState<Array<{id: string, type: string, valeur: string}>>([]) //états pour gérer les sélections d'heure, jour, mois ou semaine
       const [heuresPlages, setHeuresPlages] = useState<Array<{id: string, debut: string, fin: string}>>([]) // etat pour stock les différentes plages horaires choisies
-    // années sélectionnées
+    const [heureDejaAjoutee, setHeureDejaAjoutee] = useState(false)
+    const [moisDejaAjoute, setMoisDejaAjoute] = useState(false)
+    const [anneeDejaAjoutee, setAnneeDejaAjoutee] = useState(false)
+
+
+      // années sélectionnées
   const [anneesSelectionnees, setAnneesSelectionnees] = useState<string[]>([])
   // liste des années disponibles 
   const [anneesDisponibles, setAnneesDisponibles] = useState<string[]>([])
 
       
-    const [choixDate, setChoixDate] = useState('')
+    const [choixDateD, setChoixDate] = useState('')
     const [jourdeb, setJourDeb] = useState('')
     const [jourfin, setJourFin] = useState('')
     const [heuredeb, setHeureDeb] = useState('')
@@ -327,10 +336,11 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     instrumentIds: instrumentsSelectionnes,
-                    choixDate: choixDate,
+                    choixDate: choixDateD,
                     dateDebut: jourdeb || heuredeb || moisdeb || anneedeb,
                     dateFin: jourfin || heurefin || moisfin || anneefin,
-                    anneesSelectionnees: anneesSelectionnees
+                    anneesSelectionnees: anneesSelectionnees,
+                    heuresPrecisesPlages: heuresPrecisesPlages
                   })
             })
             if (response.ok){
@@ -383,12 +393,22 @@ const EnvoiDatesPrecises = () => {
     }
 }
 
-
-
-
-
+//CAS PÉRIODE
 // Fonction pour ajouter une période
 const ajouterPeriode = (type: string) => {
+    if (type === 'Jour(s)' && jourDejaAjoute) {
+        return // ne rien faire si le jour est déjà ajouté
+    }
+    if (type === 'Mois' && moisDejaAjoute){
+        return
+    }
+    if (type === 'Heure(s)' && heureDejaAjoutee){
+        return
+    }
+    if (type === 'Année(s)' && anneeDejaAjoutee){
+        return
+    }
+    
     const nouvellePeriode = {
         id: `${Date.now()}-${Math.random()}`,
         type: type,
@@ -396,11 +416,38 @@ const ajouterPeriode = (type: string) => {
     }
     setPeriodesAjoutees([...periodesAjoutees, nouvellePeriode])
     
+    if (type === 'Jour(s)') {
+        setJourDejaAjoute(true)
+    }
+    if (type === 'Heure(s)'){
+        setHeureDejaAjoutee(true)
+    }
+    if (type === 'Mois'){
+        setMoisDejaAjoute(true)
+    }
+    if (type === 'Année(s)'){
+        setAnneeDejaAjoutee(true)
+    }
 }
 
 // Fonction pour supprimer une période
 const supprimerPeriode = (id: string) => {
+    const PeriodesASupprimer = periodesAjoutees.find(periode => periode.id === id)
     setPeriodesAjoutees(periodesAjoutees.filter(periode => periode.id !== id))
+
+    if (PeriodesASupprimer?.type === 'Jour(s)') {
+        setJourDejaAjoute(false)
+    }
+    if (PeriodesASupprimer?.type === 'Heure(s)') {
+        setAnneeDejaAjoutee(false)
+    }
+    if (PeriodesASupprimer?.type === 'Mois') {
+        setMoisDejaAjoute(false)
+    }
+    if (PeriodesASupprimer?.type === 'Année(s)') {
+        setAnneeDejaAjoutee(false)
+    }
+
 };
 
 // Fonction pour mettre à jour la valeur d'une période
@@ -436,7 +483,7 @@ const updateHeure = (id: string, champ: 'debut' | 'fin', valeur: string) => {
 useEffect(() => {
   const anneeActuelle = new Date().getFullYear()
   const annees = []
-  for (let i = 2020; i <= anneeActuelle + 1; i++) {
+  for (let i = 2020; i <= anneeActuelle; i++) {
       annees.push(i.toString())
   }
   setAnneesDisponibles(annees)
@@ -465,7 +512,7 @@ const selectToutAnnees = () => {
 // Rendu conditionnel pour chaque type de période
 const renderPeriodeInput = (periode: {id: string, type: string, valeur: string}) => {
     switch(periode.type) {
-        case 'Heure':
+        case 'Heure(s)':
             return (
               
               <Box>
@@ -528,7 +575,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
               </Button>
           </Box>
       )
-        case 'Jour':
+        case 'Jour(s)':
             // Récupérer les jours actuels depuis periode.valeur
             const joursActuels = periode.valeur ? periode.valeur.split(',').filter(j => j !== '') : []
             const tousJoursSelectionnes = joursActuels.length === 7
@@ -627,7 +674,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                     </FormGroup>
                 </Stack>
             )
-        case 'Année':
+        case 'Année(s)':
           const toutesAnneesSelectionnees = anneesSelectionnees.length === anneesDisponibles.length && anneesDisponibles.length > 0 
           return (
           <Box>
@@ -677,30 +724,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
               ))}
           </Box>
           
-          {/* Option pour une année spécifique en input */}
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 2 }}>
-              <input 
-                  type="number" 
-                  value={periode.valeur.split('-')[0] || ''} 
-                  onChange={(e) => updatePeriodeValeur(periode.id, `${e.target.value}-${periode.valeur.split('-')[1] || ''}`)} 
-                  style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
-                  placeholder="Année début"
-                  min="2020"
-                  max={new Date().getFullYear() + 2}
-              />
-              <Typography variant="body2">à</Typography>
-              <input 
-                  type="number" 
-                  value={periode.valeur.split('-')[1] || ''} 
-                  onChange={(e) => updatePeriodeValeur(periode.id, `${periode.valeur.split('-')[0] || ''}-${e.target.value}`)} 
-                  style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
-                  placeholder="Année fin"
-                  min="2020"
-                  max={new Date().getFullYear() + 2}
-              />
-              
-          </Stack>
-          
+
       </Box>
            
           )
@@ -708,7 +732,72 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
           return null
                     }
                 }
-    
+
+    //CAS DATES PRÉCISES
+    // Ajouter une date précise (Jour ou Heure)
+    const ajouterDatePrecise = (type: string) => {
+        if (type === 'Jour(s)' && jourDejaAjoute) {
+            return // ne rien faire si le jour est déjà ajouté
+        }
+        const nouvelleDate = {
+            id: `${Date.now()}-${Math.random()}`,
+            type: type,
+            valeur: ''  
+        }
+        setDatesPrecisesAjoutees([...datesPrecisesAjoutees, nouvelleDate])
+        if (type === 'Jour(s)') {
+            setJourDejaAjoute(true)
+        }
+    }
+
+    // Supprimer une date précise
+    const supprimerDatePrecise = (id: string) => {
+        const dateASupprimer = datesPrecisesAjoutees.find(date => date.id === id)
+        setDatesPrecisesAjoutees(datesPrecisesAjoutees.filter(date => date.id !== id))
+        if (dateASupprimer?.type === 'Jour(s)') {
+            setJourDejaAjoute(false)
+        }
+    }
+
+    // Mettre à jour la valeur d'une date précise
+    const updateDatePrecise = (id: string, valeur: string) => {
+        setDatesPrecisesAjoutees(datesPrecisesAjoutees.map(date =>
+            date.id === id ? { ...date, valeur: valeur } : date
+        ))
+    }
+
+    // Ajouter une plage horaire pour dates précises
+    const ajouterNvHeurePrecise = () => {
+        const nouvelleHeure = {
+            id: `${Date.now()}-${Math.random()}`,
+            debut: '',
+            fin: ''
+        }
+        setHeuresPrecisesPlages([...heuresPrecisesPlages, nouvelleHeure])
+    }
+
+    // Supprimer une plage horaire pour dates précises
+    const supprimerHeurePrecise = (id: string) => {
+        setHeuresPrecisesPlages(heuresPrecisesPlages.filter(heure => heure.id !== id))
+    }
+
+    // Mettre à jour une plage horaire pour dates précises
+    const updateHeurePrecise = (id: string, champ: 'debut' | 'fin', valeur: string) => {
+        setHeuresPrecisesPlages(heuresPrecisesPlages.map(heure =>
+            heure.id === id ? { ...heure, [champ]: valeur } : heure
+        ))
+    }
+
+    // Réinitialiser tous les choix de dates précises
+    const resetDatesPrecises = () => {
+        setDatesPrecisesAjoutees([])
+        setHeuresPrecisesPlages([])
+        setJourDejaAjoute(false)
+        setHeureDeb('')
+        setHeureFin('')
+        setJourDeb('')
+        setJourFin('')
+    }
 
 
     return (
@@ -912,159 +1001,215 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                 
                                 
 
-                                 {/* choix des jours de la semaine pour les périodes */}
-                                  {periodesTemp && (
-                                    <>
-                                      <Divider sx={{ my: 2 }} />
+                                        {/* choix des jours de la semaine pour les périodes */}
+                                        {periodesTemp && (
+                                            <>
+                                            <Divider sx={{ my: 2 }} />
 
-                            <InputLabel>Ajoutez les informations utiles à la période que vous recherchez :</InputLabel><br></br>
-                                          {/* Boutons pour ajouter des périodes */}
-                                          <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}>
+                                    <InputLabel>Ajoutez les informations utiles à la période que vous recherchez :</InputLabel><br></br>
+                                                {/* Boutons pour ajouter des périodes */}
+                                    <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}>
 
-                              <Button
-                                  variant="contained"
-                                  id="BoutonJour"
-                                  startIcon={<AddIcon />}
-                                  onClick={() => ajouterPeriode('Jour')}
-                                  sx={{
-                                      bgcolor: '#0370B2',
-                                      '&:hover': { bgcolor: '#00517C' },
-                                      fontSize: '0.75rem',
-                                      py: 0.5
-                                  }}
-                              >
-                                  Jour
-                              </Button>
+                                    <Button
+                                        variant="contained"
+                                        id="BoutonJourP"
+                                        startIcon={<AddIcon />}
+                                        onClick={() => ajouterPeriode('Jour(s)')}
+                                        disabled={jourDejaAjoute}
+                                            sx={{
+                                                bgcolor: jourDejaAjoute ? '#CCCCCC' : '#0370B2',
+                                                '&:hover': { bgcolor: jourDejaAjoute ? '#CCCCCC' : '#00517C' },
+                                                fontSize: '0.75rem',
+                                                py: 0.5
+                                            }}
+                                    >
+                                        Jour(s)
+                                    </Button>
 
-                              <Button
-                                  variant="contained"
-                                  id="BoutonHeure"
-                                  startIcon={<AddIcon />}
-                                  onClick={() => ajouterPeriode('Heure')}
-                                  sx={{
-                                      bgcolor: '#0370B2',
-                                      '&:hover': { bgcolor: '#00517C' },
-                                      fontSize: '0.75rem',
-                                      py: 0.5
-                                  }}
-                              >
-                                  Heure
-                              </Button>
+                                    <Button
+                                        variant="contained"
+                                        id="BoutonHeure"
+                                        startIcon={<AddIcon />}
+                                        onClick={() => ajouterPeriode('Heure(s)')}
+                                        disabled={heureDejaAjoutee}
+                                            sx={{
+                                                bgcolor: heureDejaAjoutee ? '#CCCCCC' : '#0370B2',
+                                                '&:hover': { bgcolor: heureDejaAjoutee ? '#CCCCCC' : '#00517C' },
+                                                fontSize: '0.75rem',
+                                                py: 0.5
+                                            }}
+                                    >
+                                        Heure(s)
+                                    </Button>
 
-                            
-                              <Button
-                                  variant="contained"
-                                  id="BoutonMois"
-                                  startIcon={<AddIcon />}
-                                  onClick={() => ajouterPeriode('Mois')}
-                                  sx={{
-                                      bgcolor: '#0370B2',
-                                      '&:hover': { bgcolor: '#00517C' },
-                                      fontSize: '0.75rem',
-                                      py: 0.5
-                                  }}
-                              >
-                                  Mois
-                              </Button>
-                              <Button
-                                  variant="contained"
-                                  id="BoutonAnnee"
-                                  startIcon={<AddIcon />}
-                                  onClick={() => ajouterPeriode('Année')}
-                                  sx={{
-                                      bgcolor: '#0370B2',
-                                      '&:hover': { bgcolor: '#00517C' },
-                                      fontSize: '0.75rem',
-                                      py: 0.5
-                                  }}
-                              >
-                                  Année
-                              </Button>
-                          </Stack>
+                                    
+                                    <Button
+                                        variant="contained"
+                                        id="BoutonMois"
+                                        startIcon={<AddIcon />}
+                                        onClick={() => ajouterPeriode('Mois')}
+                                        disabled={moisDejaAjoute}
+                                            sx={{
+                                                bgcolor: moisDejaAjoute ? '#CCCCCC' : '#0370B2',
+                                                '&:hover': { bgcolor: moisDejaAjoute ? '#CCCCCC' : '#00517C' },
+                                                fontSize: '0.75rem',
+                                                py: 0.5
+                                            }}
+                                    >
+                                        Mois
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        id="BoutonAnnee"
+                                        startIcon={<AddIcon />}
+                                        onClick={() => ajouterPeriode('Année(s)')}
+                                        disabled={anneeDejaAjoutee}
+                                            sx={{
+                                                bgcolor: anneeDejaAjoutee ? '#CCCCCC' : '#0370B2',
+                                                '&:hover': { bgcolor: anneeDejaAjoutee ? '#CCCCCC' : '#00517C' },
+                                                fontSize: '0.75rem',
+                                                py: 0.5
+                                            }}
+                                        
+                                    >
+                                        Année(s)
+                                    </Button>
+                                </Stack>
 
-                          {/* Liste des périodes ajoutées */}
-                          {periodesAjoutees.length > 0 && (
-                              <Stack spacing={2}>
-                                  <Typography variant="subtitle2" sx={{ color: '#666' }}>
-                                      Périodes sélectionnées :
-                                  </Typography>
-                                  {periodesAjoutees.map((periode) => (
-                                      <Paper key={periode.id} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                                          <Stack spacing={2}>
-                                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                  <Typography variant="subtitle2" sx={{ color: '#0370B2' }}>
-                                                      {periode.type}
-                                                  </Typography>
-                                                  <Button
-                                                      size="small"
-                                                      color="error"
-                                                      startIcon={<DeleteIcon />}
-                                                      onClick={() => supprimerPeriode(periode.id)}
-                                                  >
-                                                      Supprimer
-                                                  </Button>
-                                              </Box>
-                                              {renderPeriodeInput(periode)}
-                                          </Stack>
-                                      </Paper>
-                                  ))}
-                              </Stack>
-                          )}
-                      </>
-                  )}
-                  </Box>
+                                {/* Liste des périodes ajoutées */}
+                                {periodesAjoutees.length > 0 && (
+                                    <Stack spacing={2}>
+                                        <Typography variant="subtitle2" sx={{ color: '#666' }}>
+                                            Périodes sélectionnées :
+                                        </Typography>
+                                        {periodesAjoutees.map((periode) => (
+                                            <Paper key={periode.id} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                                                <Stack spacing={2}>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <Typography variant="subtitle2" sx={{ color: '#0370B2' }}>
+                                                            {periode.type}
+                                                        </Typography>
+                                                                {/*pas de bouton supprimer pour Jour(s), Mois et Année(s) car strict minimum pr recuperer les données*/}
+                                                                {periode.type !=='Jour(s)' && periode.type !== 'Mois' && periode.type !== 'Année(s)' && (
+                                                                    <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => supprimerPeriode(periode.id)}>
+                                                                    Supprimer
+                                                                </Button>
+                                                                )}
+                                                    </Box>
+                                                    {renderPeriodeInput(periode)}
+                                                </Stack>
+                                            </Paper>
+                                        ))}
+                                    </Stack>
+                                )}
+                            </>
+                        )}
+                        
+                        </Box>
 
-                               
+                               {/*choix de datation par dates précises*/}
                                 {datesPrecises && (
                                   <>
-                                <FormControl component="fieldset">
-                                    <RadioGroup row value={choixDate} onChange={(e) => setChoixDate(e.target.value)}>
-                                        <FormControlLabel value="Heure" control={<Radio />} label="Heure" />
-                                        <FormControlLabel value="Jour" control={<Radio />} label="Jour" />
-                                        <FormControlLabel value="Mois" control={<Radio />} label="Mois" />
-                                        <FormControlLabel value="Année" control={<Radio />} label="Année" />
-                                    </RadioGroup>
-                                </FormControl>
-                            
+                                  <Divider sx={{ my: 2 }} />
+                                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                        <InputLabel>Ajoutez les informations utiles à la date/aux dates que vous recherchez :</InputLabel><br></br>
+                                        <Button 
+                                        size="small" 
+                                        color="error" 
+                                        startIcon={<DeleteIcon />}
+                                        onClick={resetDatesPrecises}
+                                        sx={{ fontSize: '0.7rem' }}
+                                    >
+                                        Tout supprimer
+                                    </Button>
+                                </Box>
+                                        
+                                        <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}>
+                                        
+                                        <Button
+                                            variant="contained"
+                                            id="BoutonJourD"
+                                            startIcon={<AddIcon />}
+                                            onClick={() => ajouterDatePrecise('Jour(s)')}
+                                            disabled={jourDejaAjoute}
+                                            sx={{
+                                                bgcolor: jourDejaAjoute ? '#CCCCCC' : '#0370B2',
+                                                '&:hover': { bgcolor: jourDejaAjoute ? '#CCCCCC' : '#00517C' },
+                                                fontSize: '0.75rem',
+                                                py: 0.5
+                                            }}
+                                        >
+                                            Jour(s)
+                                        </Button> 
+                                        
+                                        <Button
+                                            variant="contained"
+                                            id="BoutonHeureD"
+                                            startIcon={<AddIcon />}
+                                            onClick={() => {
+                                                ajouterDatePrecise('Heure') 
+                                                
+                                            }}
+                                            sx={{
+                                                bgcolor: '#0370B2',
+                                                '&:hover': { bgcolor: '#00517C' },
+                                                fontSize: '0.75rem',
+                                                py: 0.5
+                                            }}
+                                        >
+                                            Heure
+                                        </Button>
 
-                            {/* Heure */}
-                            {choixDate === 'Heure' && (
-                                <Stack direction="row" spacing={2}>
-                                    <input type="time" value={heuredeb} onChange={(e) => setHeureDeb(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}> </input>
-                                    <input type="time" value={heurefin} onChange={(e) => setHeureFin(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} > </input>
-                                </Stack>
-                            )}
-
-                            {/* Jour */}
-                            {choixDate === 'Jour' && (
-                                <Stack direction="row" spacing={2}>
-                                    <input type="date" value={jourdeb} onChange={(e) => setJourDeb(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} />
-                                    <input type="date" value={jourfin} onChange={(e) => setJourFin(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} />
-                                </Stack>
-                            )}
-
-                          
-
-                            {/* Mois */}
-                            {choixDate === 'Mois' && (
-                                <Stack direction="row" spacing={2}>
-                                    <input type="date" value={moisdeb} onChange={(e) => setMoisDeb(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} />
-                                    <input type="date" value={moisfin} onChange={(e) => setMoisFin(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} />
-                                </Stack>
-                            )}
-
-                            {/* Année */}
-                            {choixDate === 'Année' && (
-                                <Stack direction="row" spacing={2}>
-                                    <input type="date" value={anneedeb} onChange={(e) => setAnneeDeb(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} />
-                                    <input type="date" value={anneefin} onChange={(e) => setAnneeFin(e.target.value)} style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }} />
-                                </Stack>
-                            )}
-                                </>
+                                        </Stack>
+                                        {/* Liste des dates précises ajoutées */}
+                                        {datesPrecisesAjoutees.length > 0 && (
+                                            <Stack spacing={2}>
+                                                <Typography variant="subtitle2" sx={{ color: '#666' }}>
+                                                    Date(s) sélectionnée(s) :
+                                                </Typography>
+                                                {datesPrecisesAjoutees.map((date) => (
+                                                    <Paper key={date.id} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                                                        <Stack spacing={2}>
+                                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                <Typography variant="subtitle2" sx={{ color: '#0370B2' }}>
+                                                                    {date.type}
+                                                                </Typography>
+                                                                {/*pas de bouton supprimer pour Jour(s)*/}
+                                                                {date.type !=='Jour(s)' && (
+                                                                    <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => supprimerDatePrecise(date.id)}>
+                                                                    Supprimer
+                                                                </Button>
+                                                                )}
+                                                                
+                                                            </Box>
+                                                            {date.type === 'Heure' && (
+                                                                <Stack direction="row" spacing={2} alignItems="center">
+                                                                    <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>From</Typography>
+                                                                    <input type="time" value={date.valeur.split('-')[0] || ''} onChange={(e) => updateDatePrecise(date.id, `${e.target.value}-${date.valeur.split('-')[1] || ''}`)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '40%' }} />
+                                                                    <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>To</Typography>
+                                                                    <input type="time" value={date.valeur.split('-')[1] || ''} onChange={(e) => updateDatePrecise(date.id, `${date.valeur.split('-')[0] || ''}-${e.target.value}`)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '40%' }} />
+                                                                </Stack>
+                                                            )}
+                                                            {date.type === 'Jour(s)' && (
+                                                                <Stack direction="row" spacing={2}>
+                                                                    <input type="date" value={date.valeur.split('-')[0] || ''} onChange={(e) => updateDatePrecise(date.id, `${e.target.value}-${date.valeur.split('-')[1] || ''}`)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '45%' }} />
+                                                                    <input type="date" value={date.valeur.split('-')[1] || ''} onChange={(e) => updateDatePrecise(date.id, `${date.valeur.split('-')[0] || ''}-${e.target.value}`)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '45%' }} />
+                                                                </Stack>
+                                                            )}
+                                                        </Stack>
+                                                    </Paper>
+                                                ))}
+                                            </Stack>
+                                        )}
+                                    </>
                                 )}
-                                        <Stack direction="row" spacing={2} justifyContent="center">
+                                         
+                                        
 
-        
+                                        
+
+                            <Stack direction="row" spacing={2} justifyContent="center">
+
                             <Button
                               type="submit"
                               variant="contained"
@@ -1079,7 +1224,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                               Rechercher
                             </Button>   
                           </Stack>
-                        </Stack>
+                          </Stack>
                     </form>
                 </Paper>
             </Container>
