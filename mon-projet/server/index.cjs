@@ -45,6 +45,23 @@ app.get('/api/instruments', async (req, res) => {
     } //afficher numéro instrument en plus du nom !!
 })
 
+// Route pour récupérer tous les responsables_fichiers
+app.get('/api/responsables', async (req, res) => {
+    try {
+        const result = await client.query(`SELECT 
+                p.id_personne,
+                p.nom,
+                p.prenom,
+                p.adresse_mail
+            FROM responsable_fichier rf
+            JOIN personne p ON rf.id_responsable = p.id_personne
+            ORDER BY p.nom ASC`)
+        res.json(result.rows)
+    } catch (err) {
+        res.status(500).json({ error: err.message })
+    }
+})
+
 
 
 //route pour récupérer toutes les catégories
