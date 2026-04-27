@@ -24,8 +24,11 @@ function DepotFichier(){
     const navigate = useNavigate();
 
     const [selectedInstrument, setSelectedInstrument] = useState<string>('');
+    const [selectedResponsable,setSelectedResponsable] = useState<string>('');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [showAdditionalInputs, setShowAdditionalInputs] = useState<boolean>(false);
+    const [showCreationRespInputs, setShowCreationRespInputs] = useState<boolean>(false);
+    const [utilisateur, setUtilisateur] = useState<string>('');
     const [nom, setNom] = useState<string>('');
     const [prenom, setPrenom] = useState<string>('');
     const [mail, setMail] = useState<string>('');
@@ -35,14 +38,13 @@ function DepotFichier(){
     const [dateCueilli, setDateCueilli] = useState<string>('');
     const [typeSource, setTypeSource] = useState<string>('');
     const [instruments, setInstrumentsDisponibles] = useState([]);
-    const [numInstrument, setNumInstrument] = useState(''); 
-    const [modele, setModele] = useState('');
+    const [numInstrument, setNumInstrument] = useState<string>('');
+    const [modele, setModele] = useState<string>('');
+    const [responsables, setResponsablesDisponibles] = useState([]);
 
-    const isFormComplete = selectedInstrument !== '' && selectedInstrument !== '';
+    const isFormComplete = selectedInstrument !== '';
     const areAdditionalInputsComplete = 
-    nom !== '' && 
-    prenom !== '' && 
-    mail !== '' && 
+    utilisateur !== '' &&
     numSerie !== '' && 
     extension !== '' && 
     dateImport !== '' && 
@@ -60,9 +62,14 @@ useEffect(() => {
 
                 const instrumentsRes = await fetch('http://localhost:3000/api/instruments')
                 const instrumentsData = await instrumentsRes.json()
-                console.log("Catégories reçues du backend:", instrumentsData) 
+                console.log("instruments reçues du backend:", instrumentsData) 
                 setInstrumentsDisponibles(instrumentsData || [])
-                
+
+                const respononsablesRes = await fetch('http://localhost:3000/api/responsables')
+                const respononsablesData = await respononsablesRes.json()
+                console.log("Respononsables reçues du backend:", respononsablesData)
+                setResponsablesDisponibles(respononsablesData || [])
+
             } catch (error) {
                 console.error('Erreur lors du chargement des données:', error)
                 //setChargement(false)
@@ -76,30 +83,35 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 */
 
     const autoFillSerialNumber = (selectedInstrumentName: string) => {
-    // Find the instrument in your fetched data
+    // Trouver les instruments dans le data on a recupere
     const selectedInstrument = instruments.find(
         instrument => instrument.nom_outil === selectedInstrumentName
     );
     
-    // If instrument found and has a serial number, set it
+    //Si l-instrument possede un numero de serie, on le met
     if (selectedInstrument && selectedInstrument.num_serie) {
         setNumSerie(selectedInstrument.num_serie);
         
     } else {
-        // Clear the field if no instrument selected or no serial number
+       
+        //Si l-instrument selectionne n-as pas de numero de serie, laisser l-input libre
         setNumSerie('');
     }
 };
 
-    const handleInstrumentChange = (event: SelectChangeEvent) => {
+    const InstrumentChange = (event: SelectChangeEvent) => {
     const selectedValue = event.target.value;
     setSelectedInstrument(selectedValue);
     
-    // Auto-fill serial number when instrument changes
+    //Auto completion du numero de serie quand l-instrument changes
     autoFillSerialNumber(selectedValue);
 };
+  const ResponsableChange = (event: SelectChangeEvent) => {
+    const selectedValue = event.target.value;
+    setSelectedResponsable(selectedValue);
+};
 
-    // Function to extract and format date from filename based on capteur type
+    //fonction pour extraire et formater la date a partir du nom du fichier base sur le type de linstrument
 const extractDateFromFilename = (fileName: string, instrumentType: string): string | null => {
     try {
         // HOBO
@@ -165,7 +177,6 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
 
 
       const autoFillInstrumentFromFile = (fileName: string) => {
-    // Detection logic
     let detectedInstrument = null;
     
     if (fileName.includes('K-') || fileName.includes('K-A3')) {
@@ -181,7 +192,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
     if (detectedInstrument) {
         setSelectedInstrument(detectedInstrument);
         
-        // Auto-fill serial number and other details
+        //AUto completion du numero de serie
         const instrument = instruments.find(i => i.nom_outil === detectedInstrument);
         if (instrument) {
             setNumSerie(instrument.num_serie || '');
@@ -190,7 +201,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
             
         }
         
-        // Extract date as before
+        //Extractuion de la date
         const extractedDate = extractDateFromFilename(fileName, detectedInstrument);
         if (extractedDate) {
             setDateCueilli(extractedDate);
@@ -201,9 +212,10 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
 
 
 
-    const handleFileUpload = () => {
+    const FileUpload = () => {
       const fileInput = document.createElement('input');
       fileInput.type = 'file';
+      fileInput.accept = '.csv, .xlsx, .xls, .png, .wav';
       fileInput.onchange = (e: Event) => {
         const target = e.target as HTMLInputElement;
         if (target.files && target.files.length > 0) {
@@ -211,13 +223,39 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
           setSelectedFile(file);
           setShowAdditionalInputs(true);
           autoFillInstrumentFromFile(file.name);
-          handleAutofillExtension(file);
+          AutofillExtension(file);
+          AutofillTypeSource(file);
         }
       };  
       fileInput.click();
   };
 
-    const handleAutofillExtension = (file: File) => {
+  const AutofillTypeSource = (file: File) => {
+    if (file && file.name.includes('.')) {
+    const extension = file.name.split('.').pop() || '';
+    console.log(extension);
+    
+    //Verifier si l-extension est d-un fichier_mesure
+      if(extension.includes('xls')||
+      extension.includes('xlsx')||
+      extension.includes('csv'))
+      {setTypeSource('fichier_mesure')}
+
+      //Verifier si l-extension est d-un dosier_audio
+      if(extension.includes('mp3')){setTypeSource('dossier_audio')}
+
+      //Verifier si l-extension est d-un dossier_image
+      if(extension.includes('png')||
+      extension.includes('jpg')||
+      extension.includes('jpeg')||
+      extension.includes('svg'))
+      {setTypeSource('dossier_image')}
+    }
+    else{setTypeSource('')}
+    
+  };
+
+    const AutofillExtension = (file: File) => {
     if (file && file.name.includes('.')) {
       const extensionPart = file.name.split('.').pop() || '';
       setExtension(extensionPart);
@@ -225,9 +263,9 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
       setExtension('');
       alert('Le fichier sélectionné n\'a pas d\'extension');
     }
-};
+  };
     
-    const handleAutofillDate = () => {
+    const AutofillDate = () => {
       const today = new Date();
       const year = today.getFullYear();
       const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -235,7 +273,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
       setDateImport(`${year}-${month}-${day}`);
     };
 
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    const Submit = (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       
       if (!isFormComplete) {
@@ -254,9 +292,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
       
       console.log('Uploading file:', selectedFile.name);
       console.log('Instrument:', selectedInstrument);
-      console.log('Nom:', nom);
-      console.log('Prenom:', prenom);
-      console.log('Mail:', mail);
+      console.log('User : utilistateur');
       console.log('Numéro de série:', numSerie);
       console.log('Extension:', extension);
       console.log('Date Import:',dateImport);
@@ -279,14 +315,14 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
           <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h5" margin={2} gutterBottom sx={{ color: '#5d4037' }}>
                 <center><b>DÉPÔT DE FICHIER</b></center>
-                <br></br>
+                <br/>
                 </Typography>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={Submit}>
               <Stack spacing={3}>
                 <Button
                   type="button"
                   variant="contained"
-                  onClick={handleFileUpload}
+                  onClick={FileUpload}
                   sx={{
                     bgcolor: '#EC9706',
                     '&:hover': { bgcolor: '#C78023' },
@@ -308,7 +344,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                         <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
                         <Select
                             value={selectedInstrument} 
-                            onChange={handleInstrumentChange}
+                            onChange={InstrumentChange}
                             label="Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier"
                         >
                             {instruments.map((instrument) => (
@@ -323,7 +359,45 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                     </FormControl>
                       
                     <TextField
-                      label="Nom"
+                      label="Utilisateur"
+                      variant="outlined"
+                      fullWidth
+                      required
+                      value={utilisateur}
+                      onChange={(e) => setUtilisateur(e.target.value)}
+                      placeholder="Qui veut deposer le fichier"
+                    />
+
+                    <FormControl fullWidth required>
+                        <InputLabel>Sélectionnez le Responsable_fichier</InputLabel>
+                        <Select
+                            value={selectedResponsable} 
+                            onChange={ResponsableChange}
+                            label="Sélectionnez le Responsable_fichier"
+                        >
+                            {responsables.map((responsable) => (
+                                <MenuItem 
+                                    key={responsable.id_personne} 
+                                    value={responsable.adresse_mail}
+                                >
+                                    {responsable.nom} {responsable.prenom}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <Button
+                        type="button"
+                        variant="outlined"
+                        onClick={(e) => setShowCreationRespInputs(!showCreationRespInputs)}
+                        sx={{ minWidth: '100px', height: '56px' }}
+                      >
+                        Creer nouveau Responsable_Fichier
+                      </Button>
+                    
+                   {showCreationRespInputs &&(
+                    <>
+                   <TextField
+                      label="nom"
                       variant="outlined"
                       fullWidth
                       required
@@ -349,6 +423,17 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                       onChange={(e) => setMail(e.target.value)}
                       placeholder="Entrez votre eMail"
                     />
+                    <Button
+                        type="button"
+                        variant="outlined"
+                        //onClick={(e) => }
+                        sx={{ minWidth: '100px', height: '56px' }}
+                      >
+                        Creer
+                      </Button>
+
+                    </>
+                    )}
                     
                     <TextField
                           label="Numero de serie"
@@ -398,7 +483,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                       <Button
                         type="button"
                         variant="outlined"
-                        onClick={handleAutofillDate}
+                        onClick={AutofillDate}
                         sx={{ minWidth: '100px', height: '56px' }}
                       >
                         Aujourd'hui
@@ -412,9 +497,9 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                         onChange={(e) => setTypeSource(e.target.value)}
                         label="Type source"
                       >
-                        <MenuItem value="fichier">Fichier</MenuItem>
-                        <MenuItem value="audio">Audio</MenuItem>
-                        <MenuItem value="image">Image</MenuItem>
+                        <MenuItem value="fichier_mesure">fichier_mesure</MenuItem>
+                        <MenuItem value="dossier_audio">dossier_audio</MenuItem>
+                        <MenuItem value="dossier_image">dossier_image</MenuItem>
                       </Select>
                     </FormControl>
                   </>
@@ -428,7 +513,8 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                     bgcolor: (isFormComplete && selectedFile && areAdditionalInputsComplete) ? '#EC9706' : '#CCCCCC',
                     '&:hover': {
                       bgcolor: (isFormComplete && selectedFile && areAdditionalInputsComplete) ? '#C78023' : '#CCCCCC',
-                    },
+                    },//Tengo que velar a que cuando nos estan activos los campos de la creation del referent fichier
+                    //todavia se pueda mandar el formulario pq no son considerados como espacios vacios
                   }}
                 >
                   Déposer
