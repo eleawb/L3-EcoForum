@@ -182,28 +182,26 @@ app.post('/api/recherche', async (req, res) => {
     try {
         const idsNumbers = instrumentIds.map(id => parseInt(id, 10))
         
-        // Récupérer d'abord la structure pour connaître nb_colonnes avant de parse
+        // Récupérer les structures de chaque instrument pour avoir nb_colonnes 
         const structureQuery = `
-            SELECT sf.nb_colonnes, sf.nom_instrument
+            SELECT DISTINCT
+                i.id_instrument,
+                i.nom_outil,
+                sf.nb_colonnes,
+                sf.nom_colonnes,
+                sf.nom_instrument as structure_nom
             FROM instrument_mesure i
             JOIN structure_fichier sf ON sf.id_structure = i.id_structure
             WHERE i.id_instrument = ANY($1::int[])
-            LIMIT 1
         `
-        const structureResult = await client.query(structureQuery, [idsNumbers])
+        const structures = await client.query(structureQuery, [idsNumbers])
         
-        let nbColonnes = 0
-        if (structureResult.rows.length > 0) {
-            nbColonnes = structureResult.rows[0].nb_colonnes
-        }
-        
-        console.log("Nombre de colonnes attendu:", nbColonnes) //debug
-        
-        // récupérer les mesures dans description_mesure (+ nom instrument et capteur pour que ce soit plus clair)
+        // Récupérer toutes les mesures
         let query = `
             SELECT 
-                
+                m.id_mesure,
                 m.description_mesure,
+                i.id_instrument,
                 i.nom_outil as instrument,
                 i.modele,
                 i.num_instrument,
@@ -218,64 +216,122 @@ app.post('/api/recherche', async (req, res) => {
         
         let params = [idsNumbers]
         
-        /*if (dateDebut && dateFin) {
+        if (dateDebut && dateFin) {
             query += ` AND m.date_heure BETWEEN $2 AND $3`
             params.push(dateDebut, dateFin)
         }
         
-        query += ` ORDER BY m.date_heure ASC LIMIT 100`*/
+        query += ` ORDER BY i.id_instrument, m.date_heure ASC LIMIT 100`
         
         const result = await client.query(query, params)
         
-        // construire les 2 entêtes (instrument, capteur) et le reste sans entête + les résultats
-        let entetes = ['Instrument', 'Capteur']
-        let resultats = []
-        
-        // ajouter les colonnes dynamiques basées sur nb_colonnes
-        for (let i = 1; i <= nbColonnes; i++) {
-            entetes.push(`colonne_${i}`)
+        // si entêtes, on récupère les noms
+        const instrumentColonnes = new Map()
+        for (const struct of structures.rows) {
+            let nomsColonnes = []
+            if (struct.nom_colonnes) {
+                nomsColonnes = struct.nom_colonnes.split(';').map(col => col.trim())
+                // Nettoyer les noms (enlever les ||)
+                nomsColonnes = nomsColonnes.map(col => {
+                    if (col.includes('||')) {
+                        return col.split('||')[0].trim()
+                    }
+                    return col
+                })
+            } else {
+                 // Noms par défaut
+                 for (let i = 1; i <= struct.nb_colonnes; i++) {
+                    nomsColonnes.push(`colonne_${i}`)
+                }
+            }
+            instrumentColonnes.set(struct.id_instrument, {
+                nom: struct.nom_outil,
+                nb_colonnes: struct.nb_colonnes,
+                nomsColonnes: nomsColonnes
+            })
+        }
+
+        // Regrouper les résultats par instrument
+        const instrumentsMap = new Map()
+        for (const [id, info] of instrumentColonnes) {
+            instrumentsMap.set(id, {
+                id: id,
+                nom: info.nom,
+                nb_colonnes: info.nb_colonnes,
+                nomsColonnes:info.nomsColonnes,
+                mesures: []
+            })
         }
         
-        resultats = result.rows.map(row => {
-            const nouvelleLigne = {
-                "Instrument": row.instrument,
-                "Capteur": row.capteur
+        for (const row of result.rows) {
+            const instrument = instrumentsMap.get(row.id_instrument)
+            if (instrument) {
+                instrument.mesures.push(row)
             }
-            
-            // parser description_mesure pour extraire les valeurs entre ;
-            if (row.description_mesure) {
-                const valeurs = row.description_mesure.split(';')
-                for (let i = 0; i < valeurs.length; i++) {
-                    nouvelleLigne[`colonne_${i + 1}`] = valeurs[i] || '-'
-                }
-                // Si la ligne a moins de colonnes que prévu, compléter avec des '-'
-                for (let i = valeurs.length; i < nbColonnes; i++) {
-                    nouvelleLigne[`colonne_${i + 1}`] = '-'
-                }
-            } else {
-                // Pas de données
-                for (let i = 1; i <= nbColonnes; i++) {
-                    nouvelleLigne[`colonne_${i}`] = '-'
-                }
-            }
-            
-            return nouvelleLigne
-        })
+        }
         
-        const previewResultats = resultats.slice(0, 20)
-        
-        console.log(`${resultats.length} résultats trouvés`)
-        
-        res.json({
-            resultats: resultats,
-            previewResultats: previewResultats,
-            entetes: entetes
-        })
-        
-    } catch (err) {
-        console.error('Erreur:', err.message)
-        res.status(500).json({ error: err.message })
-    }
+
+       // Déterminer toutes les colonnes uniques à afficher (fusionner tous les noms de colonnes)
+       const uniqueColonnes = new Map() // Map pour garder l'ordre
+       uniqueColonnes.set('Instrument', true)
+       uniqueColonnes.set('Capteur', true)
+       
+       for (const [id, instrument] of instrumentsMap) {
+           for (const colName of instrument.nomsColonnes) {
+               if (!uniqueColonnes.has(colName)) {
+                   uniqueColonnes.set(colName, true)
+               }
+           }
+       }
+       
+       const entetesGlobales = Array.from(uniqueColonnes.keys())
+       
+       // Construire les résultats
+       let tousLesResultats = []
+       
+       for (const [id, instrument] of instrumentsMap) {
+           if (instrument.mesures.length === 0) continue
+           
+           for (const row of instrument.mesures) {
+               const nouvelleLigne = {}
+               
+               nouvelleLigne["Instrument"] = row.instrument
+               nouvelleLigne["Capteur"] = row.capteur
+               
+               // Remplir les colonnes avec les vrais noms
+               for (let i = 0; i < instrument.nomsColonnes.length; i++) {
+                   const colName = instrument.nomsColonnes[i]
+                   if (row.description_mesure) {
+                       const valeurs = row.description_mesure.split(';')
+                       nouvelleLigne[colName] = valeurs[i] || '-'
+                   } else {
+                       nouvelleLigne[colName] = '-'
+                   }
+               }
+               
+               // Pour les colonnes qui existent dans d'autres instruments mais pas dans celui-ci
+               for (const entete of entetesGlobales) {
+                   if (nouvelleLigne[entete] === undefined && entete !== 'Instrument' && entete !== 'Capteur') {
+                       nouvelleLigne[entete] = '-'
+                   }
+               }
+               
+               tousLesResultats.push(nouvelleLigne)
+           }
+       }
+       
+       const previewResultats = tousLesResultats.slice(0, 40)
+       
+       res.json({
+           resultats: tousLesResultats,
+           previewResultats: previewResultats,
+           entetes: entetesGlobales
+       })
+       
+   } catch (err) {
+       console.error('Erreur:', err.message)
+       res.status(500).json({ error: err.message })
+   }
 })
 
 
