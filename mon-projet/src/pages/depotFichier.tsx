@@ -55,8 +55,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 Empiezo a querer implementar la BDD
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 */
-useEffect(() => {
-        const fetchData = async () => {
+const fetchData = async () => {
             console.log("début du fetch data")
             try {
 
@@ -75,9 +74,55 @@ useEffect(() => {
                 //setChargement(false)
             }
         }
-        fetchData()
+        //Effectue le call a fetch data une seule fois en page load
+useEffect(() => {
+        fetchData();
     }, [])
+    const handleCreateResponsable = async () => {
+              //Verifie si les entrees sont remplies
+              if (!nom || !prenom || !mail) {
+                alert("Veuillez remplir tous les champs (nom, prénom, email)");
+                return;
+              }
 
+              try {
+                const response = await fetch('http://localhost:3000/api/responsable_fichier', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    nom: nom,
+                    prenom: prenom,
+                    email: mail,
+                    fonction: "responsable_fichier" // toujours un responsable_fichier
+                  }),
+                });
+
+                if (response.ok) {
+                  const data = await response.json();
+                  alert("Responsable fichier créé avec succès!");
+                  
+                  // recharger la liste des responsables fichiers disponibles dans la BDD
+                  fetchData();
+                  
+                   // Remettre le form de creation en blanc
+                  setNom('');
+                  setPrenom('');
+                  setMail('');
+                  setShowCreationRespInputs(false);
+                  //Selection automatique du responsable cree
+                  setSelectedResponsable(data.email);
+                } else {
+                  const error = await response.json();
+                  alert(`Erreur: ${error.message}`);
+                }
+              } catch (error) {
+                console.error('Error:', error);
+                alert("Erreur lors de la création du responsable");
+              }
+        };
+            
 /* 
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 */
@@ -386,13 +431,13 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                         </Select>
                     </FormControl>
                     <Button
-                        type="button"
-                        variant="outlined"
-                        onClick={(e) => setShowCreationRespInputs(!showCreationRespInputs)}
-                        sx={{ minWidth: '100px', height: '56px' }}
-                      >
-                        Creer nouveau Responsable_Fichier
-                      </Button>
+                    type="button"
+                    variant="outlined"
+                    onClick={(e) => setShowCreationRespInputs(true)}
+                    sx={{ minWidth: '100px', height: '56px' }}
+                    >
+                    Creer nouveau responsable fichier  
+                    </Button>
                     
                    {showCreationRespInputs &&(
                     <>
@@ -426,7 +471,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                     <Button
                         type="button"
                         variant="outlined"
-                        //onClick={(e) => }
+                        onClick={handleCreateResponsable}
                         sx={{ minWidth: '100px', height: '56px' }}
                       >
                         Creer
@@ -453,7 +498,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                         required
                         value={extension}
                         onChange={(e) => setExtension(e.target.value)}
-                        placeholder="Extension du fichier"
+                        placeholder="E  u fichier"
                       />
                     </Stack>
                     
