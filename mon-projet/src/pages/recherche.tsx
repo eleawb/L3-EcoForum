@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { Search as SearchIcon, Add as AddIcon, Delete as DeleteIcon  } from '@mui/icons-material' //icônes prévues sur MaterialUI pour être user friendly
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs' //npm install @mui/x-date-pickers dayjs
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
-//import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker' //visuel du choix de date 
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'
-
-import dayjs, { Dayjs } from 'dayjs' //pr mettre la date
+import { DatePicker } from '@mui/x-date-pickers/DatePicker' //visuel mui du choix de date
+import { DesktopTimePicker } from '@mui/x-date-pickers/DesktopTimePicker' //visuel mui du choix de l'heure 
+import "react-time-picker-typescript/dist/style.css" //style choix heure
+import dayjs, { Dayjs } from 'dayjs' //pr gérer la date (dayjs().add(1, 'year') par ex)
 import {
   Radio,
   Autocomplete,
@@ -53,11 +53,10 @@ function Recherche() {
     // méthodes de datation
     //si choix dates précises
     const [datesPrecises, setDatesPrecises] = useState(false)
-    const [datesPrecisesAjoutees, setDatesPrecisesAjoutees] = useState<Array<{id: string, type: string, valeur: string}>>([])
+    const [datesPrecisesAjoutees, setDatesPrecisesAjoutees] = useState<Array<{id: string, type: string, valeur: string, plagesHoraires?: Array<{debut: string, fin: string}>}>>([]) //+plages horaire incluses
     const [heuresPrecisesPlages, setHeuresPrecisesPlages] = useState<Array<{id: string, debut: string, fin: string}>>([])
     const [jourDejaAjoute, setJourDejaAjoute] = useState(false) //on ne peut cliquer qu'une fois sur "jour(s)" car pas une plage journalière
-    const [isPickerOpen, setIsPickerOpen] = useState(false) //choix date timepicker
-    const [activeField, setActiveField] = useState<'start' | 'end'>('start')
+   
 
     //si choix périodes temporelles
     const [periodesTemp, setPeriodesTemp] = useState(false) 
@@ -339,19 +338,29 @@ const renderCategoryTree = (categorie: any, depth: number) => {
         //choix datatation précise
         let dateDebutQuery = null
         let dateFinQuery = null
+        //stocker ttes les plages horaires
+        let heuresQuery = []
 
         if (datesPrecises && datesPrecisesAjoutees.length > 0) {
-        const dateJour = datesPrecisesAjoutees.find(d => d.type === 'Jour(s)'); //on prend la 1ère date précise
+        const dateJour = datesPrecisesAjoutees.find(d => d.type === 'Jour(s)') //on prend la 1ère date précise
+        const dateHeure = datesPrecisesAjoutees.find(d => d.type === 'Heure(s)') //on prend la 1ère date précise
+
+        //gestion des dates
         if (dateJour && dateJour.valeur) {
-            const [debut, fin] = dateJour.valeur.split('|'); 
+            const [debut, fin] = dateJour.valeur.split('|');
             
             if (debut && fin) {
+                //verifier le format 
+                if (debut.includes('-')) {
                 // Convertir du format DD-MM-YYYY vers YYYY-MM-DD pour PostgreSQL
-                const [debutJour, debutMois, debutAnnee] = debut.split('-');
-                const [finJour, finMois, finAnnee] = fin.split('-');
-                
-                dateDebutQuery = `${debutAnnee}-${debutMois}-${debutJour}`;
-                dateFinQuery = `${finAnnee}-${finMois}-${finJour}`;
+                    const [debutJour, debutMois, debutAnnee] = debut.split('-')
+                    const [finJour, finMois, finAnnee] = fin.split('-')
+                    dateDebutQuery = `${debutAnnee}-${debutMois}-${debutJour}`
+                    dateFinQuery = `${finAnnee}-${finMois}-${finJour}`
+                } else { // si déjà au bon format
+                    dateDebutQuery = debut
+                    dateFinQuery = fin
+                }
                 
                 // Si date début = date fin, on envoie la même date pour les deux
                 if (debut === fin) {
@@ -361,7 +370,22 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                 }
             }
         }
+        //gestion des heures
+        if (dateHeure) {
+            //heure principale
+            if (dateHeure.valeur) {
+                const [debut, fin] = dateHeure.valeur.split('-');
+                if (debut && fin) {
+                    heuresQuery.push({ debut, fin });
+                }
+            }
+            //heures supplémentaires
+            if (dateHeure.plagesHoraires && dateHeure.plagesHoraires.length > 0) {
+                heuresQuery.push(...dateHeure.plagesHoraires.filter(h => h.debut && h.fin));
+            }
+        }
     }
+    
         
         try {
             const response = await fetch(`http://localhost:3000/api/recherche`, {
@@ -369,14 +393,15 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     instrumentIds: instrumentsSelectionnes,
-                    choixDate: choixDateD,
                     dateDebut: dateDebutQuery, //mtn au format YYYY-MM-DD
                     dateFin: dateFinQuery,
-                    anneesSelectionnees: anneesSelectionnees,
-                    heuresPrecisesPlages: heuresPrecisesPlages,
+                    //anneesSelectionnees: anneesSelectionnees,
+                    heuresPrecisesPlages: heuresQuery,
                     datesPrecises : datesPrecisesAjoutees //dates entières
                   })
+                
             })
+
             if (response.ok){
             const data = await response.json()
             console.log('Résultats de la recherche:', data)
@@ -768,15 +793,17 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                 }
 
     //CAS DATES PRÉCISES
-    // Ajouter une date précise (Jour ou Heure)
+    // ajouter une date précise (jour et/ou heure)
     const ajouterDatePrecise = (type: string) => {
         if (type === 'Jour(s)' && jourDejaAjoute) {
-            return // ne rien faire si le jour est déjà ajouté
+            return //ne rien faire si le jour est déjà ajouté
         }
+        
         const nouvelleDate = {
             id: `${Date.now()}-${Math.random()}`,
             type: type,
-            valeur: ''  
+            valeur: '',
+            plagesHoraires: type==='Heure(s)' ? [] : undefined 
         }
         setDatesPrecisesAjoutees([...datesPrecisesAjoutees, nouvelleDate])
         if (type === 'Jour(s)') {
@@ -794,34 +821,53 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
     }
 
     // Mettre à jour la valeur d'une date précise
-    const updateDatePrecise = (id: string, valeur: string) => {
-        setDatesPrecisesAjoutees(datesPrecisesAjoutees.map(date =>
-            date.id === id ? { ...date, valeur: valeur } : date
+    const updateDatePrecise = (id: string, valeur: string, plagesHoraires?: Array<{debut: string, fin: string}>) => {
+        setDatesPrecisesAjoutees(prev => 
+            prev.map(date =>
+                date.id === id ? { ...date, valeur: valeur, plagesHoraires : plagesHoraires||date.plagesHoraires } : date
             
         ))
         console.log("datesPrecisesAjoutees :", datesPrecisesAjoutees)
     }
 
     // Ajouter une plage horaire pour dates précises
-    const ajouterNvHeurePrecise = () => {
-        const nouvelleHeure = {
-            id: `${Date.now()}-${Math.random()}`,
-            debut: '',
-            fin: ''
-        }
-        setHeuresPrecisesPlages([...heuresPrecisesPlages, nouvelleHeure])
+    const ajouterNvHeurePrecise = (dateID : string) => {
+        setDatesPrecisesAjoutees(prev => 
+            prev.map(date => {
+                if (date.id === dateID && date.type === 'Heure(s)') {
+                    const nouvellesPlages = [...(date.plagesHoraires || []), { debut: '', fin: '' }];
+                    return { ...date, plagesHoraires: nouvellesPlages };
+                }
+                return date;
+            })
+        )
     }
 
     // Supprimer une plage horaire pour dates précises
-    const supprimerHeurePrecise = (id: string) => {
-        setHeuresPrecisesPlages(heuresPrecisesPlages.filter(heure => heure.id !== id))
+    const supprimerHeurePrecise = (dateId: string, heureId: number) => {
+        setDatesPrecisesAjoutees(prev => 
+            prev.map(date => {
+                if (date.id === dateId && date.type === 'Heure(s)') {
+                    const nouvellesPlages = (date.plagesHoraires || []).filter((_, index) => index !== heureId);
+                    return { ...date, plagesHoraires: nouvellesPlages };
+                }
+                return date;
+            })
+        )
     }
 
     // Mettre à jour une plage horaire pour dates précises
-    const updateHeurePrecise = (id: string, champ: 'debut' | 'fin', valeur: string) => {
-        setHeuresPrecisesPlages(heuresPrecisesPlages.map(heure =>
-            heure.id === id ? { ...heure, [champ]: valeur } : heure
-        ))
+    const updateHeurePrecise = (dateId: string, heureIndex: number, champ: 'debut' | 'fin', valeur: string) => {
+        setDatesPrecisesAjoutees(prev => 
+            prev.map(date => {
+                if (date.id === dateId && date.type === 'Heure(s)') {
+                    const nouvellesPlages = [...(date.plagesHoraires || [])];
+                    nouvellesPlages[heureIndex] = { ...nouvellesPlages[heureIndex], [champ]: valeur };
+                    return { ...date, plagesHoraires: nouvellesPlages };
+                }
+                return date;
+            })
+        )
     }
 
     // Réinitialiser tous les choix de dates précises
@@ -1183,7 +1229,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                             id="BoutonHeureD"
                                             startIcon={<AddIcon />}
                                             onClick={() => {
-                                                ajouterDatePrecise('Heure') 
+                                                ajouterDatePrecise('Heure(s)') 
                                                 
                                             }}
                                             sx={{
@@ -1193,7 +1239,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                 py: 0.5
                                             }}
                                         >
-                                            Heure
+                                            Heure(s)
                                         </Button>
 
                                         </Stack>
@@ -1218,15 +1264,116 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                                 )}
                                                                 
                                                             </Box>
-                                                            {date.type === 'Heure' && (
-                                                                <Stack direction="row" spacing={2} alignItems="center">
-                                                                    <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>From</Typography>
-                                                                    <input type="time" value={date.valeur.split('-')[0] || ''} onChange={(e) => updateDatePrecise(date.id, `${e.target.value}-${date.valeur.split('-')[1] || ''}`)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '40%' }} />
-                                                                    
-                                                                    <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>To</Typography>
-                                                                    <input type="time" value={date.valeur.split('-')[1] || ''} onChange={(e) => updateDatePrecise(date.id, `${date.valeur.split('-')[0] || ''}-${e.target.value}`)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '40%' }} />
-                                                                </Stack>
-                                                            )}
+                                                            {date.type === 'Heure(s)' && (
+
+                                                                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                                                    <Box>
+                                                                    <Stack direction="row" spacing={2} alignItems="center">
+                                                                        <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}></Typography>
+                                                                            <DesktopTimePicker
+                                                                            label="Heure de début"
+                                                                                value={(() => {
+                                                                                    if (!date.valeur || date.valeur==='') return null
+                                                                                    const debut = date.valeur.split('-')[0] //on récupère la 1ère heure
+                                                                                    if (!debut || debut === '') return null //vérification heure début
+                                                                                    const dateConv = dayjs(debut, 'HH:mm')
+                                                                                    return dateConv.isValid() ? dateConv : null
+                                                                                })()}
+                                                                                onChange={(newValue) => {
+                                                                                    if (newValue && newValue.isValid()) { 
+                                                                                        const fin = date.valeur.split('-')[1] || '' //split les 2 heures pr récupérer l'heure de fin et si pas d'heure de fin, ''
+                                                                                        const nouvelleValeur = `${newValue.format('HH:mm')}${fin ? `-${fin}` : ''}`
+                                                                                        updateDatePrecise(date.id, nouvelleValeur)
+                                                                                    }
+                                                                                }}
+                                                                                
+                                                                                format="HH:mm"
+                                                                                ampm={false}  // pour utiliser le format 24h
+                                                                            />
+                                                                            <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}></Typography>
+                                                                            <DesktopTimePicker
+                                                                                label="Heure de fin"
+                                                                                value={(() => {
+                                                                                    if (!date.valeur) return null
+                                                                                    const fin = date.valeur.split('-')[1]
+                                                                                    if (!fin || fin === '') return null
+                                                                                    const parsedDate = dayjs(fin, 'HH:mm')
+                                                                                    return parsedDate.isValid() ? parsedDate : null
+                                                                                })()}
+                                                                                onChange={(newValue) => {
+                                                                                    if (newValue && newValue.isValid()) {
+                                                                                        const debut = date.valeur.split('-')[0] || ''
+                                                                                        const nouvelleValeur = `${debut}${debut ? '-' : ''}${newValue.format('HH:mm')}`
+                                                                                        updateDatePrecise(date.id, nouvelleValeur)
+                                                                                    }
+                                                                                }}
+                                                                                
+                                                                                format="HH:mm"
+                                                                                ampm={false}
+                                                                            />
+                                                                        </Stack>
+
+                                                                    {/* Plages horaires supplémentaires */}
+                                                                    {(date.plagesHoraires && date.plagesHoraires.length > 0) && (
+                                                                        <>
+                                                                    <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 2, mb: 1 }}>
+                                                                        Plages horaires supplémentaires :
+                                                                    </Typography>
+
+                                                                    {/* Affichage des plages horaires supplémentaires */}
+                                                                    {date.plagesHoraires.map((heure, index) => (
+                                                                        <Stack key={index} direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                                                                            <DesktopTimePicker
+                                                                                label="Heure début"
+                                                                                value={heure.debut ? dayjs(heure.debut, 'HH:mm') : null}
+                                                                                onChange={(newValue) => {
+                                                                                    if (newValue && newValue.isValid()) {
+                                                                                        updateHeurePrecise(date.id, index, 'debut', newValue.format('HH:mm'));
+                                                                                    }
+                                                                                }}
+                                                                                
+                                                                                format="HH:mm"
+                                                                                ampm={false}
+                                                                            />
+                                                                            <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>À</Typography>
+                                                                            <DesktopTimePicker
+                                                                                label="Heure fin"
+                                                                                value={heure.fin ? dayjs(heure.fin, 'HH:mm') : null}
+                                                                                onChange={(newValue) => {
+                                                                                    if (newValue && newValue.isValid()) {
+                                                                                        updateHeurePrecise(date.id, index, 'fin', newValue.format('HH:mm'));
+                                                                                    }
+                                                                                }}
+                                                                                
+                                                                                format="HH:mm"
+                                                                                ampm={false}
+                                                                            />
+                                                                            <Button
+                                                                                size="small"
+                                                                                color="error"
+                                                                                onClick={() => supprimerHeurePrecise(date.id, index)}
+                                                                                sx={{ minWidth: 'auto' }}
+                                                                            >
+                                                                                <DeleteIcon fontSize="small" />
+                                                                            </Button>
+                                                                        </Stack>
+                                                                    ))}
+                                                                    </>
+                                                                    )}
+
+                                                                    {/* Bouton pour ajouter une plage horaire */}
+                                                                    <Button
+                                                                        size="small"
+                                                                        startIcon={<AddIcon />}
+                                                                        onClick={()=> ajouterNvHeurePrecise(date.id)}
+                                                                        sx={{ mt: 1, fontSize: '0.7rem' }}
+                                                                    >
+                                                                        Ajouter une plage horaire
+                                                                    </Button>
+                                                                </Box>
+                                                            </LocalizationProvider>
+                                                        )}
+
                                                             {date.type === 'Jour(s)' && (
                                                                 <LocalizationProvider dateAdapter={AdapterDayjs}>
                                                                     <Stack direction="row" spacing={2}>
@@ -1246,7 +1393,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                                                     updateDatePrecise(date.id, nouvelleValeur);
                                                                                 }
                                                                             }}
-                                                                            slotProps={{ textField: { size: 'small', fullWidth: true } }}
+                                                                            slotProps={{ textField: { size: 'small', fullWidth: true } }} //affichage pas trop large
                                                                             format="DD/MM/YYYY"
                                                                             minDate= {dayjs('2020')} //test choix année commence à 2020 
                                                                             maxDate = {dayjs()} //bloque à date du jour

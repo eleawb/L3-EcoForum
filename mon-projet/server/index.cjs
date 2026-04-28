@@ -109,9 +109,10 @@ app.post('/api/instruments/by-categories', async (req, res) => {
 
 // Route pour chercher les résultats
 app.post('/api/recherche', async (req, res) => {
-    const { instrumentIds, dateDebut, dateFin, datesPrecises } = req.body
+    const { instrumentIds, dateDebut, dateFin, datesPrecises, heuresPrecisesPlages } = req.body
     console.log("Recherche pour ids instrument:", instrumentIds)
     console.log("date début : ", dateDebut, ", date fin : ", dateFin)
+    console.log("plages horaires :", heuresPrecisesPlages)
     try {
         const idsNumbers = instrumentIds.map(id => parseInt(id, 10))
         
@@ -152,7 +153,7 @@ app.post('/api/recherche', async (req, res) => {
         
         if (dateDebut && dateFin) {
             if (dateDebut === dateFin){ //une seule date
-                query += ` AND DATE(m.date_heure) = $2` //$2 = dateDebut
+                query += ` AND DATE(m.date_heure) >= $2::date AND m.date_heure < ($2::date + interval '1 day')` //$2 = dateDebut
                 params.push(dateDebut)
                 console.log("recherche sur une date unique : ", dateDebut)
             } else { //sinon une période précise
@@ -173,6 +174,28 @@ app.post('/api/recherche', async (req, res) => {
         query += ` ORDER BY i.id_instrument, m.date_heure ASC LIMIT 100`
         
         const result = await client.query(query, params)
+
+        //si choix d'heures en plus :
+        let mesuresFiltrees = result.rows
+        
+        if (heuresPrecisesPlages && heuresPrecisesPlages.length > 0) { 
+            mesuresFiltrees = result.rows.filter(row => {
+                if (!row.date_heure) return false
+                
+                const dateHeure = new Date(row.date_heure)
+                const heure = dateHeure.getHours()
+                const minute = dateHeure.getMinutes()
+                const heureMinute = `${heure.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}` //convertit en char fomat "HH:mm" avec 2 chiffres HH et mm (si 9 > 09)
+                
+                // verif si l'heure correspond à au moins une des plages
+                return heuresPrecisesPlages.some(plage => {
+                    if (!plage.debut || !plage.fin) return false
+                    return heureMinute >= plage.debut && heureMinute <= plage.fin
+                })
+            })
+            
+            //console.log(`Filtrage par heure: ${result.rows.length} → ${mesuresFiltrees.length} résultats`)
+        }
         
         // s'il y a des entêtes, on récupère les noms
         const instrumentColonnes = new Map()
@@ -211,7 +234,7 @@ app.post('/api/recherche', async (req, res) => {
             })
         }
         
-        for (const row of result.rows) {
+        for (const row of mesuresFiltrees) {
             const instrument = instrumentsMap.get(row.id_instrument)
             if (instrument) {
                 instrument.mesures.push(row)
@@ -223,6 +246,9 @@ app.post('/api/recherche', async (req, res) => {
        const uniqueColonnes = new Map() // Map pour garder l'ordre d'affichage si on recoche une colonne 
        uniqueColonnes.set('Instrument', true)
        uniqueColonnes.set('Capteur', true)
+       uniqueColonnes.set('Date', true)
+       uniqueColonnes.set('Heure', true)
+
        
        for (const [id, instrument] of instrumentsMap) {
            for (const colName of instrument.nomsColonnes) {
@@ -245,7 +271,16 @@ app.post('/api/recherche', async (req, res) => {
                
                nouvelleLigne["Instrument"] = row.instrument //colonnes de base pour rappel de l'instrument choisi
                nouvelleLigne["Capteur"] = row.capteur
-               nouvelleLigne["Date"] = row.date_heure ? new Date(row.date_heure).toLocaleDateString('fr-FR') : '-' //conversion de la valeur brute récupérée de la bdd en date française
+
+               // formater la date et l'heure
+               if (row.date_heure) {
+                const dateObj = new Date(row.date_heure)
+                nouvelleLigne["Date"] = dateObj.toLocaleDateString('fr-FR') //conversion en date française DD-MM-YYYY
+                nouvelleLigne["Heure"] = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) //conversion en char à 2 chiffres (9 > 09 )
+            } else {
+                nouvelleLigne["Date"] = '-' //sinon vide
+                nouvelleLigne["Heure"] = '-'
+            }
                // remplissage des colonnes avec les vrais noms
                for (let i = 0; i < instrument.nomsColonnes.length; i++) {
                    const colName = instrument.nomsColonnes[i]
@@ -259,7 +294,7 @@ app.post('/api/recherche', async (req, res) => {
                
                // pour les colonnes qui existent dans d'autres instruments mais pas dans celui-ci
                for (const entete of entetesGlobales) {
-                   if (nouvelleLigne[entete] === undefined && entete !== 'Instrument' && entete !== 'Capteur') {
+                   if (nouvelleLigne[entete] === undefined && entete !== 'Instrument' && entete !== 'Capteur' && entete !== 'Date' && entete !== 'Heure') {
                        nouvelleLigne[entete] = '-'
                    }
                }
