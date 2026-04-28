@@ -246,8 +246,8 @@ app.post('/api/recherche', async (req, res) => {
        const uniqueColonnes = new Map() // Map pour garder l'ordre d'affichage si on recoche une colonne 
        uniqueColonnes.set('Instrument', true)
        uniqueColonnes.set('Capteur', true)
-       uniqueColonnes.set('Date', true)
-       uniqueColonnes.set('Heure', true)
+       //uniqueColonnes.set('Date', true)
+       //uniqueColonnes.set('Heure', true)
 
        
        for (const [id, instrument] of instrumentsMap) {
@@ -272,7 +272,7 @@ app.post('/api/recherche', async (req, res) => {
                nouvelleLigne["Instrument"] = row.instrument //colonnes de base pour rappel de l'instrument choisi
                nouvelleLigne["Capteur"] = row.capteur
 
-               // formater la date et l'heure
+               /* formater la date et l'heure
                if (row.date_heure) {
                 const dateObj = new Date(row.date_heure)
                 nouvelleLigne["Date"] = dateObj.toLocaleDateString('fr-FR') //conversion en date française DD-MM-YYYY
@@ -280,7 +280,7 @@ app.post('/api/recherche', async (req, res) => {
             } else {
                 nouvelleLigne["Date"] = '-' //sinon vide
                 nouvelleLigne["Heure"] = '-'
-            }
+            }*/
                // remplissage des colonnes avec les vrais noms
                for (let i = 0; i < instrument.nomsColonnes.length; i++) {
                    const colName = instrument.nomsColonnes[i]
