@@ -38,12 +38,11 @@ client.connect()
 // Route pour récupérer tous les instruments
 app.get('/api/instruments', async (req, res) => {
     try {
-        //const result = await client.query(`SELECT * FROM public.instrument ORDER BY id_instrument ASC`);//bdd fictive
         const result = await client.query(`SELECT * FROM instrument_mesure ORDER BY id_instrument ASC`)
         res.json(result.rows)
     } catch (err) {
         res.status(500).json({ error: err.message })
-    } //afficher numéro instrument en plus du nom !!
+    } 
 })
 
 // Route pour récupérer tous les responsables_fichiers
@@ -107,82 +106,16 @@ app.post('/api/instruments/by-categories', async (req, res) => {
     }
 })
 
-/*
-// Route pour chercher les résultats
-app.post('/api/recherche', async (req, res) => {
-    const { instrumentIds, choixDate, dateDebut, dateFin } = req.body
-    console.log("Recherche pour ids instrument:", instrumentIds)
-
-    try {
-        //recherche à partir des instruments sélectionnés (+récup de nom_colonnes pour les résultats)
-        let query = `
-            SELECT 
-                m.id_mesure,
-                m.valeur_mesure,
-                m.date_heure,
-                m.description_mesure,
-                i.nom_outil as instrument,
-                i.modele,
-                i.num_instrument,
-                cg.description as capteur,
-                vm.type_mesure,
-                vm.unite_mesure
-               
-             
-            FROM mesure m
-            JOIN serie_temporelle st ON st.id_st = m.id_st
-            JOIN capteur_generique cg ON cg.id_capteur_generique = st.id_capteur_gen
-            JOIN capteur c ON c.id_capteur = cg.id_capteur_generique
-            JOIN instrument_mesure i ON i.id_instrument = c.id_instrument
-            JOIN variable_mesuree vm ON vm.id_variable_mesuree = st.id_variable_mesuree
-
-            WHERE i.id_instrument = ANY($1::int[])
-        ` 
-        
-        let params = [instrumentIds.map(id => parseInt(id, 10))]
-        // Ajouter filtre de date si présent
-        if (dateDebut && dateFin) {
-            query += ` AND m.date_heure BETWEEN $2 AND $3`
-            params.push(dateDebut, dateFin)
-        }
-        
-        query += ` ORDER BY m.date_heure ASC`
-        
-        const result = await client.query(query, params) //recup tous les resultats
-
-        const resultats = result.rows //total
-        const previewResultats = resultats.slice(0, 20) //les 20 premiers pr la preview
-        
-        if (resultats.length > 1){
-            console.log(`${resultats.length} résultats trouvés, affichage des ${previewResultats.length} premiers`)
-
-        } else if (resultats.length === 1){
-            console.log(`${resultats.length} résultat trouvé`)
-
-        } else {
-            console.log(`Aucun élément trouvé`)
-        }
-        //on envoie les deux 
-        res.json({
-            resultats: resultats,
-            previewResultats: previewResultats,
-        })
-    } catch (err) {
-        console.error('Erreur:', err.message)
-        res.status(500).json({ error: err.message })
-    }
-})
-*/
 
 // Route pour chercher les résultats
 app.post('/api/recherche', async (req, res) => {
-    const { instrumentIds, choixDate, dateDebut, dateFin } = req.body
+    const { instrumentIds, dateDebut, dateFin, datesPrecises } = req.body
     console.log("Recherche pour ids instrument:", instrumentIds)
-
+    console.log("date début : ", dateDebut, ", date fin : ", dateFin)
     try {
         const idsNumbers = instrumentIds.map(id => parseInt(id, 10))
         
-        // Récupérer les structures de chaque instrument pour avoir nb_colonnes 
+        // on récupère les structures de chaque instrument pour avoir nb_colonnes pour l'affichage
         const structureQuery = `
             SELECT DISTINCT
                 i.id_instrument,
@@ -193,10 +126,10 @@ app.post('/api/recherche', async (req, res) => {
             FROM instrument_mesure i
             JOIN structure_fichier sf ON sf.id_structure = i.id_structure
             WHERE i.id_instrument = ANY($1::int[])
-        `
+        ` //$1 : 1er paramètre (instrumentsIds)
         const structures = await client.query(structureQuery, [idsNumbers])
         
-        // Récupérer toutes les mesures
+        // ensuite on récupère toutes les mesures + filtre de dates
         let query = `
             SELECT 
                 m.id_mesure,
@@ -205,7 +138,8 @@ app.post('/api/recherche', async (req, res) => {
                 i.nom_outil as instrument,
                 i.modele,
                 i.num_instrument,
-                cg.description as capteur
+                cg.description as capteur,
+                m.date_heure
             FROM mesure m
             JOIN serie_temporelle st ON st.id_st = m.id_st
             JOIN capteur_generique cg ON cg.id_capteur_generique = st.id_capteur_gen
@@ -217,29 +151,43 @@ app.post('/api/recherche', async (req, res) => {
         let params = [idsNumbers]
         
         if (dateDebut && dateFin) {
-            query += ` AND m.date_heure BETWEEN $2 AND $3`
-            params.push(dateDebut, dateFin)
-        }
+            if (dateDebut === dateFin){ //une seule date
+                query += ` AND DATE(m.date_heure) = $2` //$2 = dateDebut
+                params.push(dateDebut)
+                console.log("recherche sur une date unique : ", dateDebut)
+            } else { //sinon une période précise
+                query += ` AND m.date_heure BETWEEN $2 AND $3` //$2 = dateDebut, $3 = dateFin
+                params.push(dateDebut, dateFin)
+                console.log("recherche sur une période précise : ", dateDebut, " et ", dateFin)
+            }
+        } else if (dateDebut && !dateFin) {
+            // seulement date début sélectionnée
+            query += ` AND DATE(m.date_heure) >= $2`
+            params.push(dateDebut)
+        } else if (!dateDebut && dateFin) {
+        // seulement date fin sélectionnée
+            query += ` AND DATE(m.date_heure) <= $2`
+            params.push(dateFin)
+    }
         
         query += ` ORDER BY i.id_instrument, m.date_heure ASC LIMIT 100`
         
         const result = await client.query(query, params)
         
-        // si entêtes, on récupère les noms
+        // s'il y a des entêtes, on récupère les noms
         const instrumentColonnes = new Map()
         for (const struct of structures.rows) {
             let nomsColonnes = []
             if (struct.nom_colonnes) {
-                nomsColonnes = struct.nom_colonnes.split(';').map(col => col.trim())
-                // Nettoyer les noms (enlever les ||)
+                nomsColonnes = struct.nom_colonnes.split(';').map(col => col.trim()) //elles sont récupérées ss format col1;col2;col3 donc on split
+                // nettoyage des noms (|| à enlever)
                 nomsColonnes = nomsColonnes.map(col => {
                     if (col.includes('||')) {
-                        return col.split('||')[0].trim()
+                        return col.split('||')[0].trim() //on récupère le premier nom
                     }
                     return col
                 })
-            } else {
-                 // Noms par défaut
+            } else { //si pas d'entêtes, on met des noms par défaut pour pouvoir les cocher ou décocher
                  for (let i = 1; i <= struct.nb_colonnes; i++) {
                     nomsColonnes.push(`colonne_${i}`)
                 }
@@ -251,7 +199,7 @@ app.post('/api/recherche', async (req, res) => {
             })
         }
 
-        // Regrouper les résultats par instrument
+        // on regroupe les résultats par instrument
         const instrumentsMap = new Map()
         for (const [id, info] of instrumentColonnes) {
             instrumentsMap.set(id, {
@@ -271,8 +219,8 @@ app.post('/api/recherche', async (req, res) => {
         }
         
 
-       // Déterminer toutes les colonnes uniques à afficher (fusionner tous les noms de colonnes)
-       const uniqueColonnes = new Map() // Map pour garder l'ordre
+       // détermination de ttes les colonnes uniques à afficher (fusionner tous les noms de colonnes)
+       const uniqueColonnes = new Map() // Map pour garder l'ordre d'affichage si on recoche une colonne 
        uniqueColonnes.set('Instrument', true)
        uniqueColonnes.set('Capteur', true)
        
@@ -286,7 +234,7 @@ app.post('/api/recherche', async (req, res) => {
        
        const entetesGlobales = Array.from(uniqueColonnes.keys())
        
-       // Construire les résultats
+       // construction des résultats
        let tousLesResultats = []
        
        for (const [id, instrument] of instrumentsMap) {
@@ -295,21 +243,21 @@ app.post('/api/recherche', async (req, res) => {
            for (const row of instrument.mesures) {
                const nouvelleLigne = {}
                
-               nouvelleLigne["Instrument"] = row.instrument
+               nouvelleLigne["Instrument"] = row.instrument //colonnes de base pour rappel de l'instrument choisi
                nouvelleLigne["Capteur"] = row.capteur
-               
-               // Remplir les colonnes avec les vrais noms
+               nouvelleLigne["Date"] = row.date_heure ? new Date(row.date_heure).toLocaleDateString('fr-FR') : '-' //conversion de la valeur brute récupérée de la bdd en date française
+               // remplissage des colonnes avec les vrais noms
                for (let i = 0; i < instrument.nomsColonnes.length; i++) {
                    const colName = instrument.nomsColonnes[i]
                    if (row.description_mesure) {
                        const valeurs = row.description_mesure.split(';')
-                       nouvelleLigne[colName] = valeurs[i] || '-'
+                       nouvelleLigne[colName] = valeurs[i] || '-' //si pas de valeurs, -
                    } else {
                        nouvelleLigne[colName] = '-'
                    }
                }
                
-               // Pour les colonnes qui existent dans d'autres instruments mais pas dans celui-ci
+               // pour les colonnes qui existent dans d'autres instruments mais pas dans celui-ci
                for (const entete of entetesGlobales) {
                    if (nouvelleLigne[entete] === undefined && entete !== 'Instrument' && entete !== 'Capteur') {
                        nouvelleLigne[entete] = '-'
@@ -322,6 +270,7 @@ app.post('/api/recherche', async (req, res) => {
        
        const previewResultats = tousLesResultats.slice(0, 40)
        
+       //envoi des résultats 
        res.json({
            resultats: tousLesResultats,
            previewResultats: previewResultats,

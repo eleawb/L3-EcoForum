@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search as SearchIcon, Add as AddIcon, Delete as DeleteIcon  } from '@mui/icons-material' //icônes prévues sur MaterialUI pour être user friendly
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs' //npm install @mui/x-date-pickers dayjs
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+//import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker' //visuel du choix de date 
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 
+import dayjs, { Dayjs } from 'dayjs' //pr mettre la date
 import {
   Radio,
   Autocomplete,
@@ -51,6 +56,8 @@ function Recherche() {
     const [datesPrecisesAjoutees, setDatesPrecisesAjoutees] = useState<Array<{id: string, type: string, valeur: string}>>([])
     const [heuresPrecisesPlages, setHeuresPrecisesPlages] = useState<Array<{id: string, debut: string, fin: string}>>([])
     const [jourDejaAjoute, setJourDejaAjoute] = useState(false) //on ne peut cliquer qu'une fois sur "jour(s)" car pas une plage journalière
+    const [isPickerOpen, setIsPickerOpen] = useState(false) //choix date timepicker
+    const [activeField, setActiveField] = useState<'start' | 'end'>('start')
 
     //si choix périodes temporelles
     const [periodesTemp, setPeriodesTemp] = useState(false) 
@@ -142,7 +149,7 @@ function Recherche() {
       // Récupérer les noms des catégories pour l'API
       const nomsCategories = idsNumbers.map(id => {
           const cat = categories.find(c => c.id_categorie === id)
-          return cat?.nom
+          return cat?.nom //cat? = si cat null ou undefined, retourne undefined et pas erreur
       }).filter(Boolean)
 
       console.log("noms des catégories envoyés à l'API:", nomsCategories) //debug
@@ -329,6 +336,32 @@ const renderCategoryTree = (categorie: any, depth: number) => {
             alert('Veuillez sélectionner au moins un instrument')
             return
         }
+        //choix datatation précise
+        let dateDebutQuery = null
+        let dateFinQuery = null
+
+        if (datesPrecises && datesPrecisesAjoutees.length > 0) {
+        const dateJour = datesPrecisesAjoutees.find(d => d.type === 'Jour(s)'); //on prend la 1ère date précise
+        if (dateJour && dateJour.valeur) {
+            const [debut, fin] = dateJour.valeur.split('|'); 
+            
+            if (debut && fin) {
+                // Convertir du format DD-MM-YYYY vers YYYY-MM-DD pour PostgreSQL
+                const [debutJour, debutMois, debutAnnee] = debut.split('-');
+                const [finJour, finMois, finAnnee] = fin.split('-');
+                
+                dateDebutQuery = `${debutAnnee}-${debutMois}-${debutJour}`;
+                dateFinQuery = `${finAnnee}-${finMois}-${finJour}`;
+                
+                // Si date début = date fin, on envoie la même date pour les deux
+                if (debut === fin) {
+                    console.log("Date unique recherchée:", dateDebutQuery);
+                } else {
+                    console.log("Période recherchée:", dateDebutQuery, "à", dateFinQuery);
+                }
+            }
+        }
+    }
         
         try {
             const response = await fetch(`http://localhost:3000/api/recherche`, {
@@ -337,10 +370,11 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                 body: JSON.stringify({
                     instrumentIds: instrumentsSelectionnes,
                     choixDate: choixDateD,
-                    dateDebut: jourdeb || heuredeb || moisdeb || anneedeb,
-                    dateFin: jourfin || heurefin || moisfin || anneefin,
+                    dateDebut: dateDebutQuery, //mtn au format YYYY-MM-DD
+                    dateFin: dateFinQuery,
                     anneesSelectionnees: anneesSelectionnees,
-                    heuresPrecisesPlages: heuresPrecisesPlages
+                    heuresPrecisesPlages: heuresPrecisesPlages,
+                    datesPrecises : datesPrecisesAjoutees //dates entières
                   })
             })
             if (response.ok){
@@ -763,7 +797,9 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
     const updateDatePrecise = (id: string, valeur: string) => {
         setDatesPrecisesAjoutees(datesPrecisesAjoutees.map(date =>
             date.id === id ? { ...date, valeur: valeur } : date
+            
         ))
+        console.log("datesPrecisesAjoutees :", datesPrecisesAjoutees)
     }
 
     // Ajouter une plage horaire pour dates précises
@@ -1186,17 +1222,61 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                                 <Stack direction="row" spacing={2} alignItems="center">
                                                                     <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>From</Typography>
                                                                     <input type="time" value={date.valeur.split('-')[0] || ''} onChange={(e) => updateDatePrecise(date.id, `${e.target.value}-${date.valeur.split('-')[1] || ''}`)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '40%' }} />
+                                                                    
                                                                     <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>To</Typography>
                                                                     <input type="time" value={date.valeur.split('-')[1] || ''} onChange={(e) => updateDatePrecise(date.id, `${date.valeur.split('-')[0] || ''}-${e.target.value}`)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '40%' }} />
                                                                 </Stack>
                                                             )}
                                                             {date.type === 'Jour(s)' && (
-                                                                <Stack direction="row" spacing={2}>
-                                                                    <input type="date" value={date.valeur.split('-')[0] || ''} onChange={(e) => updateDatePrecise(date.id, `${e.target.value}-${date.valeur.split('-')[1] || ''}`)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '45%' }} />
-                                                                    <input type="date" value={date.valeur.split('-')[1] || ''} onChange={(e) => updateDatePrecise(date.id, `${date.valeur.split('-')[0] || ''}-${e.target.value}`)} style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', width: '45%' }} />
-                                                                </Stack>
+                                                                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                                                    <Stack direction="row" spacing={2}>
+                                                                        <DatePicker
+                                                                            label="Date de début"
+                                                                            value={(() => {
+                                                                                if (!date.valeur) return null;
+                                                                                const [debut] = date.valeur.split('|'); //choix de date récupéré ss forme DD-MM-YYYY|DD-MM-YYYY
+                                                                                const datedebut = debut ? dayjs(debut, 'DD-MM-YYYY') : null;
+                                                                                return datedebut && datedebut.isValid() ? datedebut : null; //si datedebut existe +valide on affiche sinon null
+
+                                                                            })()}
+                                                                            onChange={(newValue) => {
+                                                                                if (newValue && newValue.isValid()) {
+                                                                                    const fin = date.valeur?.split('|')[1] || ''; //split les 2 dates et extrait la date de fin : si pas de date de fin, ''
+                                                                                    const nouvelleValeur = `${newValue.format('DD-MM-YYYY')}${fin ? `|${fin}` : ''}`; //formate la date choisie (deb|fin) et si pas de date de fin, rien
+                                                                                    updateDatePrecise(date.id, nouvelleValeur);
+                                                                                }
+                                                                            }}
+                                                                            slotProps={{ textField: { size: 'small', fullWidth: true } }}
+                                                                            format="DD/MM/YYYY"
+                                                                            minDate= {dayjs('2020')} //test choix année commence à 2020 
+                                                                            maxDate = {dayjs()} //bloque à date du jour
+                                                                        />
+                                                                        <DatePicker
+                                                                            label="Date de fin"
+                                                                            value={(() => {
+                                                                                if (!date.valeur) return null;
+                                                                                const [, fin] = date.valeur.split('|'); //choix de date récupéré ss forme DD-MM-YYYY|DD-MM-YYYY
+                                                                                const datefin = fin ? dayjs(fin, 'DD-MM-YYYY') : null;
+                                                                                return datefin && datefin.isValid() ? datefin : null; //si datefin existe +valide on affiche sinon null
+
+                                                                            })()}
+                                                                            onChange={(newValue) => {
+                                                                                if (newValue && newValue.isValid()) {
+                                                                                    const debut = date.valeur?.split('|')[0] || '';
+                                                                                    const nouvelleValeur = `${debut}${debut ? '|' : ''}${newValue.format('DD-MM-YYYY')}`;
+                                                                                    updateDatePrecise(date.id, nouvelleValeur);
+                                                                                }
+                                                                            }}
+                                                                            slotProps={{ textField: { size: 'small', fullWidth: true } }}
+                                                                            format="DD/MM/YYYY"
+                                                                            minDate= {dayjs('2020')}
+                                                                            maxDate = {dayjs()}
+                                                                        />
+                                                                    </Stack>
+                                                                </LocalizationProvider>
                                                             )}
-                                                        </Stack>
+                                                            </Stack>
+                                                            
                                                     </Paper>
                                                 ))}
                                             </Stack>
