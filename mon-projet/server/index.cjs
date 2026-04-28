@@ -14,7 +14,7 @@ const client = new Client({
     user: "postgres",
     port: 5432,
     password: "post",
-    database: "postgres"
+    database: "postgres"    
 
 });
 
@@ -170,6 +170,35 @@ app.post('/api/recherche', async (req, res) => {
         console.error('Erreur:', err.message)
         res.status(500).json({ error: err.message })
     }
+})
+
+//Envoi des information du form pour la creation d-un nouveau responable_fichier
+app.post('/api/responsable_fichier', async (req, res) => {
+  const { nom, prenom, email, fonction } = req.body;
+  
+  try {
+    // Insertion de la nouvelle personne cree
+    const result = await client.query(
+      `INSERT INTO personne (nom, prenom, adresse_mail, fonction)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id_personne`,
+      [nom, prenom, email, fonction]
+    );
+    const id_personne = result.rows[0].id_personne;
+    // Insertion de la personne cree a la table de responsable_fichier
+    await client.query(
+      `INSERT INTO responsable_fichier (id_responsable)
+       VALUES ($1)`,
+      [id_personne]
+    );
+    res.status(201).json({ 
+      message: "Créé avec succès", 
+      id_personne, 
+      email 
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 })
 
 
