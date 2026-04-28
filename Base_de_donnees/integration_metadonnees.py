@@ -33,7 +33,7 @@ def integration_fichier_metadonnees(ficPers, ficInstr, ficLoc, ficProj):
 
     #pour obtenir le chemin jusqu'au repertoire dans lequel se trouve ce programme (car dans mon cas les fichiers .xlsx y sont aussi)
     #s'ils n'y sont pas dans la version finale, il faudra donner dans chemin le chemin vers le répertoire où ils sont stockés
-    chemin = os.getcwd()
+    chemin = os.path.join(os.getcwd(), "Fichiers_metadonnees")
 
     #Ouverture de tous les fichiers .xlsx de métadonnées avec pandas + récupération dans des listes des noms des onglets
     dfPers = pd.read_excel(os.path.join(chemin, ficPers), sheet_name=None)
@@ -219,10 +219,10 @@ if __name__ == "__main__" :
     #arguments à donner si on veut lors de l'appel au programme en ligne de commande
     # exemple d'appel : python3 integration_metadonnees.py --ficPers Remplissage_des_tables_des_personnes.xlsx --ficInstr Remplissage_des_tables_liees_aux_capteurs.xlsx
     parser = argparse.ArgumentParser()
-    parser.add_argument("--ficPers", default="Remplissage_des_tables_des_personnes.xlsx")
-    parser.add_argument("--ficInstr", default="Remplissage_des_tables_liees_aux_capteurs.xlsx")
-    parser.add_argument("--ficLoc", default="Remplissage_des_tables_de_localisation.xlsx")
-    parser.add_argument("--ficProj", default="Remplissage_des_tables_des_projet&groupes.xlsx")
+    parser.add_argument("--ficPers", default="videPers.xlsx")
+    parser.add_argument("--ficInstr", default="videInstr.xlsx")
+    parser.add_argument("--ficLoc", default="videLoc.xlsx")
+    parser.add_argument("--ficProj", default="videProj.xlsx")
     args = parser.parse_args()
 
 
@@ -240,6 +240,9 @@ if __name__ == "__main__" :
 
     #Appel à la fonction qui va ajouter les données stockées dans les fichiers de métadonnées en .xlsx
     integration_fichier_metadonnees(args.ficPers, args.ficInstr, args.ficLoc, args.ficProj)
+    """
+    python3 integration_metadonnees.py --ficPers Metadonnees_personnes.xlsx --ficInstr Metadonnees_instruments_capteurs.xlsx --ficLoc Metadonnees_localisations.xlsx --ficProj Metadonnees_projets.xlsx
+    """
 
     #Pour faire passer les modifications à la base de données
     conn.commit()
