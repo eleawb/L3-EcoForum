@@ -41,31 +41,41 @@ function ResultatsRecherche() {
             console.log("Résultats reçus:", location.state.previewResultats?.length||0, "affichés en preview sur les", location.state.resultats?.length||0, "totaux") //si résultats undefined, ça bug donc mettre à 0
             console.log("Entêtes des colonnes :", location.state.entetes)
         
-            // récupérer les colonnes depuis le 1er résultat
-            if (location.state.previewResultats && location.state.previewResultats.length > 0) {
+            // récupérer les entêtes depuis le backend
+            if (location.state.entetes && location.state.entetes.length > 0) {
+                const entetesSansDoublons = []
+                for (let i = 0; i < location.state.entetes.length; i++) {
+                    if (entetesSansDoublons.indexOf(location.state.entetes[i]) === -1) {
+                        entetesSansDoublons.push(location.state.entetes[i])
+                    }
+                }
+            
+                setColonnes(entetesSansDoublons)
+                setColonnesSelectionnees(new Set(entetesSansDoublons))
+            } else if (location.state.previewResultats && location.state.previewResultats.length > 0) {
+                // Fallback: récupérer depuis les données (exclure les champs internes)
                 const cols = Object.keys(location.state.previewResultats[0])
                 setColonnes(cols)
-                // toutes les colonnes sélectionnées par défaut
                 setColonnesSelectionnees(new Set(cols))
             }
-        } else {
-            console.log("Aucun résultat récupéré dans location.state")
-            setResultats([]) //réinitialiser
-            setPreviewResultats([])
-        }
+        } 
         setLoading(false)
     }, [location])
 
-        // gérer sélection/désélection d'une colonne
+        // gérer sélection/désélection d'une colonne et en gardant l'ordre
         const ColonneChange = (colonne: string) => {
-            const nvSelection = new Set(colonnesSelectionnees)
-            if (nvSelection.has(colonne)) { 
-                nvSelection.delete(colonne)
-            } else {
-                nvSelection.add(colonne)
-            }
-            setColonnesSelectionnees(nvSelection)
+            setColonnesSelectionnees(prev => {
+                const newSelection = new Set(prev)
+                if (newSelection.has(colonne)) {
+                    newSelection.delete(colonne)
+                } else {
+                    newSelection.add(colonne)
+                }
+                return newSelection
+            })
         }
+        
+
     
         // sélection/désélection de toutes les colonnes
         const SelectTout = () => {
@@ -80,12 +90,20 @@ function ResultatsRecherche() {
     const telechargerCSV = () => {
         if (resultats.length === 0) return
 
-        const colonnesAAfficher = Array.from(colonnesSelectionnees)
+
+        const colonnesAAfficher = colonnes.filter(col => colonnesSelectionnees.has(col))
         const csvRows = [colonnesAAfficher]
 
         // ajouter les données
-        for (const row of resultats) { //ou previewResultats ?
-            const ligne = colonnesAAfficher.map(col => row[col] || '')
+        for (const row of resultats) {
+            const ligne = colonnesAAfficher.map(col => {
+                let valeur = row[col] || ''
+                // Si la valeur contient des guillemets ou points-virgules, on l'encapsule
+                if (typeof valeur === 'string' && (valeur.includes(';') || valeur.includes('"'))) {
+                    valeur = `"${valeur.replace(/"/g, '""')}"`
+                }
+                return valeur
+            })
             csvRows.push(ligne)
         }
         
@@ -102,7 +120,6 @@ function ResultatsRecherche() {
         URL.revokeObjectURL(url)
     }
 
-    const colonnesAAfficher = Array.from(colonnesSelectionnees)
 
     return (
         <Box sx={{ flexGrow: 1 }}>
@@ -185,7 +202,7 @@ function ResultatsRecherche() {
                                 <Table stickyHeader size="small">
                                     <TableHead>
                                         <TableRow>
-                                            {colonnesAAfficher.map((col, index) => (
+                                        {colonnes.filter(col => colonnesSelectionnees.has(col)).map((col, index) => (
                                                 <TableCell key={index}><b>{col}</b></TableCell>
                                             ))}
                                         </TableRow>
@@ -193,9 +210,8 @@ function ResultatsRecherche() {
                                     <TableBody>
                                         {previewResultats.map((row, idx) => (
                                             <TableRow key={idx} hover>
-                                                {colonnesAAfficher.map((col, colIdx) => (
-                                                    <TableCell key={`${idx}-${colIdx}`}>
-                                                        {typeof row[col] === 'object' ? JSON.stringify(row[col]) : row[col]}
+                                                {colonnes.filter(col => colonnesSelectionnees.has(col)).map((col, colIdx) => (                                                    <TableCell key={`${idx}-${colIdx}`}>
+                                                        {row[col] || '-'}
                                                     </TableCell>
                                                 ))}
                                             </TableRow>
