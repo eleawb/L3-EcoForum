@@ -405,19 +405,18 @@ app.post('/api/responsable_fichier', async (req, res) => {
     res.status(500).json({ message: error.message })
   }
 })
-
 ////////////Stockage du fichier televerse
-const multer = require('multer')
-const path = require('path')
-const fs = require('fs')
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 // Configure storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, 'uploads')
+    const uploadDir = path.join(__dirname, 'uploads');
     //Cree un dossier sil nexiste pas
     if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true })
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
     cb(null, uploadDir);
   },
@@ -425,15 +424,15 @@ const storage = multer.diskStorage({
    
     cb(null, file.originalname);
   }
-})
+});
 
-const upload = multer({ storage: storage })
+const upload = multer({ storage: storage });
 
 //Stockage Fichier
 app.post('/api/upload', upload.single('file'), (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' })
+      return res.status(400).json({ error: 'No file uploaded' });
     }
 
     //Recuperer l information du fichier
@@ -445,15 +444,11 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
         path: req.file.path,
         size: req.file.size
       }
-    })
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Erreure Sauvegarde' })
+    res.status(500).json({ error: 'Erreure Sauvegarde' });
   }
-})
-
-
-
-
+});
 
 app.listen(port, () => {
     console.log(`Serveur démarré sur http://localhost:${port}`)
