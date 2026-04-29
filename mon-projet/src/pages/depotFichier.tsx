@@ -125,7 +125,45 @@ useEffect(() => {
             
 /* 
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-*/
+//Generation du JSONfile a envoyer
+*/const generateJSONFile = () => {
+  // recollection des informations du form
+  const formData = {
+    fichier: {
+      nom: selectedFile ? selectedFile.name : null,
+      taille: selectedFile ? selectedFile.size : null,
+      type: selectedFile ? selectedFile.type : null,
+    },
+    depot: {
+      instrument: selectedInstrument,
+      utilisateur: utilisateur,
+      responsable_fichier: selectedResponsable,
+      numero_serie: numSerie,
+      extension: extension,
+      date_cueilli: dateCueilli,
+      date_import: dateImport,
+      type_source: typeSource,
+    },
+    
+  };
+
+  //Convertion au format JSON
+  const jsonString = JSON.stringify(formData, null, 2);
+  
+  //Creation du file et telechargement
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `depot_fichier_${Date.now()}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  
+  alert("Fichier JSON généré avec succès!");
+};
+
 
     const autoFillSerialNumber = (selectedInstrumentName: string) => {
     // Trouver les instruments dans le data on a recupere
@@ -558,8 +596,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                     bgcolor: (isFormComplete && selectedFile && areAdditionalInputsComplete) ? '#EC9706' : '#CCCCCC',
                     '&:hover': {
                       bgcolor: (isFormComplete && selectedFile && areAdditionalInputsComplete) ? '#C78023' : '#CCCCCC',
-                    },//Tengo que velar a que cuando nos estan activos los campos de la creation del referent fichier
-                    //todavia se pueda mandar el formulario pq no son considerados como espacios vacios
+                    },
                   }}
                 >
                   Déposer
