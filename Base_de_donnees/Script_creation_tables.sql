@@ -684,4 +684,4 @@ INSERT INTO categorie_variable (nom, id_parent) VALUES
     ('Gestion Espaces Verts', (SELECT id_categorie FROM categorie_variable WHERE nom = 'Perturbation Anthropique'));
 
 
-INSERT INTO structure_fichier (extension, nom_colonnes, nb_colonnes, colonnes_a_traiter, format_titre, nom_instrument) VALUES ('xlsx', '#; Date et heure (CET/CEST) || CET || CEST; Température, °C', 3, '0; 0; 1', '\(n°[0-9]+\) [0-9]+ ? [0-9]+-[0-9]+-[0-9]+ [0-9]+_[0-9]+_[0-9]+ CES?T\.xlsx', 'Hobo');  
+INSERT INTO structure_fichier (extension, nom_colonnes, nb_colonnes, colonnes_a_traiter, format_titre, nom_instrument) VALUES ('xlsx', '#; Date et heure (CET/CEST) || (CET) || (CEST); Température , °C', 3, '0; 0; 1', '\(n°[0-9]+\) [0-9]+ ? [0-9]+-[0-9]+-[0-9]+ [0-9]+_[0-9]+_[0-9]+ CES?T\.xlsx', 'Hobo');  
