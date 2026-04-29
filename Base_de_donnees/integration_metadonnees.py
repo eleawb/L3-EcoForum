@@ -163,8 +163,10 @@ def integration_fichier_metadonnees(ficPers, ficInstr, ficLoc, ficProj):
         #print("insertion de localisation réussie")
 
         #on récupère tous les capteurs qui sont liés à l'instrument de mesure cité dans la ligne
-        cur.execute("SELECT id_capteur FROM capteur JOIN instrument_mesure im ON im.id_instrument = capteur.id_instrument WHERE lower(num_instrument) IS NOT DISTINCT FROM lower(%s);", (row[0],))
+        print(row[0])
+        cur.execute("SELECT id_capteur FROM capteur JOIN instrument_mesure im ON im.id_instrument = capteur.id_instrument WHERE lower(im.num_instrument) IS NOT DISTINCT FROM lower(%s);", (row[0],))
         capteurs = cur.fetchall()
+        print(capteurs)
         #pour chaque capteur associé à un instrument, on associe la bonne localisation. (dans notre .xlsx, la localisation est associée à un instrument et pas un capteur alors que dans notre modèle EA c'est l'inverse) 
         for c in capteurs:
             date_deb = row[1].strftime("%Y-%m-%d") if hasattr(row[1], "strftime") else row[1]

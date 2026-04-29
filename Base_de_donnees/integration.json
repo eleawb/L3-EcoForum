@@ -1,0 +1,18 @@
+{
+    "chemin_source" : "C:\\Users\\Aurore\\Projet_EcoForum\\Hobo\\(n°02) 21150037  2026-01-28 15_41_19 CET.xlsx",
+    "type_source" : "fichier_mesure",
+    "script" : "integration",
+    "est_responsable_fichier" : false,
+    "mail_responsable" : "daisy.drater@umontpellier.fr",
+    "nom" : "drater",
+    "prenom" : "daisy",
+    "fonction" : "Enseignant",
+    "encadre_par" : "marine.zwicke@umontpellier.fr",
+    "nom_outil" : "Hobo",
+    "num_instrument" : "HOBO_n°02",
+    "num_serie" : "21150037",
+    "extension" : "xlsx",
+    "date_recueil" : "2026-01-28 15:41:19",
+    "date_import" : "2026-04-29 20:41:47",
+    "commentaire" : "test n°03"
+}
