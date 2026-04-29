@@ -714,9 +714,9 @@ INSERT INTO variable_mesuree (type_mesure, unite_mesure, description_var_mesuree
     -- Hobo
     (' Température , °C', '°C', 'Température de l air prise par le Hobo'),
     -- TMS4
-    ('Température-6cm', '°C', 'Température prise par le TMS4 à -6cm du sol'),
-    ('Température2cm', '°C', 'Température prise par le TMS4 à 2cm du sol'),
-    ('Température15cm', '°C', 'Température prise par le TMS4 à 15cm du sol'),
+    ('Température -6cm', '°C', 'Température prise par le TMS4 à -6cm du sol'),
+    ('Température 2cm', '°C', 'Température prise par le TMS4 à 2cm du sol'),
+    ('Température 15cm', '°C', 'Température prise par le TMS4 à 15cm du sol'),
     ('Conductivité', 'S/m', 'Humidité du sol'),
     -- Dendromètre
     ('TemperatureDendro', '°C', 'Température prise par le Dendromètre'),
@@ -731,23 +731,23 @@ INSERT INTO variable_mesuree (type_mesure, unite_mesure, description_var_mesuree
 
 INSERT INTO possede_categorie (id_variable, id_categorie) VALUES
     -- Hobo
-    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = ' Température , °C'), 
+    ((SELECT id_variable_mesuree FROM variable_mesuree WHERE type_mesure = ' Température , °C'), 
     (SELECT id_categorie FROM categorie_variable WHERE nom = 'Température Air')),
     -- TMS4
-    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'Température -6cm'), 
+    ((SELECT id_variable_mesuree FROM variable_mesuree WHERE type_mesure = 'Température -6cm'), 
     (SELECT id_categorie FROM categorie_variable WHERE nom = 'Température Sol')),
-    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'Température 2cm'), 
+    ((SELECT id_variable_mesuree FROM variable_mesuree WHERE type_mesure = 'Température 2cm'), 
     (SELECT id_categorie FROM categorie_variable WHERE nom = 'Température Sol')),
-    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'Température 15cm'), 
+    ((SELECT id_variable_mesuree FROM variable_mesuree WHERE type_mesure = 'Température 15cm'), 
     (SELECT id_categorie FROM categorie_variable WHERE nom = 'Température Sol')),
-    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'Conductivité'), 
+    ((SELECT id_variable_mesuree FROM variable_mesuree WHERE type_mesure = 'Conductivité'), 
     (SELECT id_categorie FROM categorie_variable WHERE nom = 'Humidité Sol')),
     -- Dendromètre
-    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'TemperatureDendro'), 
+    ((SELECT id_variable_mesuree FROM variable_mesuree WHERE type_mesure = 'TemperatureDendro'), 
     (SELECT id_categorie FROM categorie_variable WHERE nom = 'Température Air')),
-    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'Variation_diametre'), 
+    ((SELECT id_variable_mesuree FROM variable_mesuree WHERE type_mesure = 'Variation_diametre'), 
     (SELECT id_categorie FROM categorie_variable WHERE nom = 'Croissance Aérienne')),
     -- Thermologger
-    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'TemperatureCanopee'), 
+    ((SELECT id_variable_mesuree FROM variable_mesuree WHERE type_mesure = 'TemperatureCanopee'), 
     (SELECT id_categorie FROM categorie_variable WHERE nom = 'Température Air'))
     ;
