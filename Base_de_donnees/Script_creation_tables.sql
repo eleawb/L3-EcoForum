@@ -683,5 +683,71 @@ INSERT INTO categorie_variable (nom, id_parent) VALUES
     ('Pollution Lumineuse', (SELECT id_categorie FROM categorie_variable WHERE nom = 'Perturbation Anthropique')),
     ('Gestion Espaces Verts', (SELECT id_categorie FROM categorie_variable WHERE nom = 'Perturbation Anthropique'));
 
+--======================================================
+--Remplissage de la table structure_fichiers
+--======================================================
 
-INSERT INTO structure_fichier (extension, nom_colonnes, nb_colonnes, colonnes_a_traiter, format_titre, nom_instrument) VALUES ('xlsx', '#; Date et heure (CET/CEST) || (CET) || (CEST); Température , °C', 3, '0; 0; 1', '\(n°[0-9]+\) [0-9]+ ? [0-9]+-[0-9]+-[0-9]+ [0-9]+_[0-9]+_[0-9]+ CES?T\.xlsx', 'Hobo');  
+INSERT INTO structure_fichier (extension, nom_colonnes, nb_colonnes, colonnes_a_traiter, format_titre, nom_instrument) VALUES 
+    -- Hobo
+    ('xlsx', '#; Date et heure (CET/CEST) || (CET) || (CEST); Température , °C', 
+    3, '0; 0; 1', 
+    '\(n°[0-9]+\) [0-9]+ ? [0-9]+-[0-9]+-[0-9]+ [0-9]+_[0-9]+_[0-9]+ CES?T\.xlsx', 'Hobo'),
+    -- TMS4
+    ('csv', 'Index;Date et heure (CET/CEST);TimeZone;Température -6cm;Température 2cm;Température 15cm;Conductivité;Shake;ErrFlag', 
+    9, '0;0;0;1;1;1;1;0;0', 
+    '^data_(\d+)_(\d{4})_(\d{2})_(\d{2})_(\d)\.csv$', 'TMS4'),
+    -- Dendromètre
+    ('csv', 'Index;Date et heure (CET/CEST);TimeZone;TemperatureDendro;;;Variation_diametre;Shake;ErrFlag', 
+    9, '0;0;0;1;0;0;1;0;0', 
+    '^data_dendro_(\d+)_(\d{4})_(\d{2})_(\d{2})_(\d)\.csv$', 'Dendrometre'),
+    -- Thermologger
+    ('csv', 'Index;Date et heure (CET/CEST);TimeZone;TemperatureCanopee;;;;Shake;ErrFlag', 
+    9, '0;0;0;1;0;0;0;0;0', 
+    '', 'Thermologger')
+    ;
+
+--======================================================
+--Remplissage de la table variable_mesuree
+--======================================================
+
+INSERT INTO variable_mesuree (type_mesure, unite_mesure, description_var_mesuree) VALUES
+    -- Hobo
+    (' Température , °C', '°C', 'Température de l air prise par le Hobo'),
+    -- TMS4
+    ('Température-6cm', '°C', 'Température prise par le TMS4 à -6cm du sol'),
+    ('Température2cm', '°C', 'Température prise par le TMS4 à 2cm du sol'),
+    ('Température15cm', '°C', 'Température prise par le TMS4 à 15cm du sol'),
+    ('Conductivité', 'S/m', 'Humidité du sol'),
+    -- Dendromètre
+    ('TemperatureDendro', '°C', 'Température prise par le Dendromètre'),
+    ('Variation_diametre', 'µm', 'Variation de diamètre de l arbre'),
+    -- Thermologger
+    ('TemperatureCanopee', '°C', 'Température prise par le Thermologger de la canopée')
+    ;
+
+--======================================================
+--Remplissage de la table possede_categorie
+--======================================================
+
+INSERT INTO possede_categorie (id_variable, id_categorie) VALUES
+    -- Hobo
+    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = ' Température , °C'), 
+    (SELECT id_categorie FROM categorie_variable WHERE nom = 'Température Air')),
+    -- TMS4
+    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'Température -6cm'), 
+    (SELECT id_categorie FROM categorie_variable WHERE nom = 'Température Sol')),
+    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'Température 2cm'), 
+    (SELECT id_categorie FROM categorie_variable WHERE nom = 'Température Sol')),
+    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'Température 15cm'), 
+    (SELECT id_categorie FROM categorie_variable WHERE nom = 'Température Sol')),
+    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'Conductivité'), 
+    (SELECT id_categorie FROM categorie_variable WHERE nom = 'Humidité Sol')),
+    -- Dendromètre
+    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'TemperatureDendro'), 
+    (SELECT id_categorie FROM categorie_variable WHERE nom = 'Température Air')),
+    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'Variation_diametre'), 
+    (SELECT id_categorie FROM categorie_variable WHERE nom = 'Croissance Aérienne')),
+    -- Thermologger
+    ((SELECT id_variable FROM variable_mesuree WHERE type_mesure = 'TemperatureCanopee'), 
+    (SELECT id_categorie FROM categorie_variable WHERE nom = 'Température Air'))
+    ;
