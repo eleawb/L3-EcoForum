@@ -8,6 +8,7 @@ import json
 import argparse
 from openpyxl import load_workbook
 from datetime import datetime
+import sys
 
 
 def expand_item(item):
@@ -181,25 +182,36 @@ def verification_hobo(metajson):
 
 
 if __name__ == "__main__":
-
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--json")
-    args = parser.parse_args()
+    args = parser.parse_args()"""
 
-    # Connexion à la base
-    conn = psycopg2.connect(
-        host="localhost",
-        database="eco_forum",
-        user="postgres",
-        password="123456",
-        port=5432
-    )
+    if len(sys.argv) != 2:
+        dico = {}
+        dico["commentaire"] = "Usage : ./verification_hobo.py JSON/verification_Hobo.json"
+        dico["reussite"] = False
+        with open("retour.json", "w", encoding="utf-8") as f:
+            json.dump(dico, f, indent=4, ensure_ascii=False)
+        print(os.path.join(os.getcwd(), "retour.json"))
 
-    #Création du curseur qui nous permettra de faire les requêtes
-    cur = conn.cursor()
+    else :
 
-    verification_hobo(args.json)
+        # Connexion à la base
+        conn = psycopg2.connect(
+            host="localhost",
+            database="eco_forum",
+            user="postgres",
+            password="123456",
+            port=5432
+        )
 
-    # Fermeture curseur et connexion à la base
-    cur.close()
-    conn.close()
+        #Création du curseur qui nous permettra de faire les requêtes
+        cur = conn.cursor()
+
+        #verification_hobo(args.json)
+        verification_hobo(sys.argv[1])
+
+        # Fermeture curseur et connexion à la base
+        cur.close()
+        conn.close()
