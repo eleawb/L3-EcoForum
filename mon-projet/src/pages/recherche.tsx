@@ -335,55 +335,100 @@ const renderCategoryTree = (categorie: any, depth: number) => {
             alert('Veuillez sélectionner au moins un instrument')
             return
         }
-        //choix datatation précise
+
+        //DATATION PRÉCISE
+        //choix des dates
         let dateDebutQuery = null
         let dateFinQuery = null
-        //stocker ttes les plages horaires
+        //stocker ttes les plages horaires 
         let heuresQuery = []
 
-        if (datesPrecises && datesPrecisesAjoutees.length > 0) {
-        const dateJour = datesPrecisesAjoutees.find(d => d.type === 'Jour(s)') //on prend la 1ère date précise
-        const dateHeure = datesPrecisesAjoutees.find(d => d.type === 'Heure(s)') //on prend la 1ère date précise
+        //PÉRIODES TEMPORELLES
+        let periodesData = {
+            joursSemaine: [] as string[],
+            mois: [] as string[],
+            heures: [] as Array<{debut: string, fin: string}>,
+            annees: [] as string[]
+        }
 
-        //gestion des dates
-        if (dateJour && dateJour.valeur) {
-            const [debut, fin] = dateJour.valeur.split('|');
+        //gestion périodes temporelles
+        if (periodesTemp && periodesAjoutees.length > 0) {
+            for (const periode of periodesAjoutees) {
+                switch (periode.type) {
+                    case 'Jour(s)':
+                        if (periode.valeur) {
+                            periodesData.joursSemaine = periode.valeur.split(',')
+                        }
+                        break
+                    case 'Mois':
+                        if (periode.valeur) {
+                            periodesData.mois = periode.valeur.split(',')
+                        }
+                        break
+                    case 'Heure(s)':
+                        if (periode.valeur) {
+                            const [debut, fin] = periode.valeur.split('-')
+                            if (debut && fin) {
+                                periodesData.heures.push({ debut, fin })
+                            }
+                        }
+                        break
+                    case 'Année(s)':
+                        periodesData.annees = anneesSelectionnees
+                        break
+                }
+            }
             
-            if (debut && fin) {
-                //verifier le format 
-                if (debut.includes('-')) {
-                // Convertir du format DD-MM-YYYY vers YYYY-MM-DD pour PostgreSQL
-                    const [debutJour, debutMois, debutAnnee] = debut.split('-')
-                    const [finJour, finMois, finAnnee] = fin.split('-')
-                    dateDebutQuery = `${debutAnnee}-${debutMois}-${debutJour}`
-                    dateFinQuery = `${finAnnee}-${finMois}-${finJour}`
-                } else { // si déjà au bon format
-                    dateDebutQuery = debut
-                    dateFinQuery = fin
-                }
-                
-                // Si date début = date fin, on envoie la même date pour les deux
-                if (debut === fin) {
-                    console.log("Date unique recherchée:", dateDebutQuery);
-                } else {
-                    console.log("Période recherchée:", dateDebutQuery, "à", dateFinQuery);
-                }
-            }
-        }
-        //gestion des heures
-        if (dateHeure) {
-            //heure principale
-            if (dateHeure.valeur) {
-                const [debut, fin] = dateHeure.valeur.split('-');
-                if (debut && fin) {
-                    heuresQuery.push({ debut, fin });
-                }
-            }
             //heures supplémentaires
-            if (dateHeure.plagesHoraires && dateHeure.plagesHoraires.length > 0) {
-                heuresQuery.push(...dateHeure.plagesHoraires.filter(h => h.debut && h.fin));
+            if (heuresPlages.length > 0) {
+                periodesData.heures.push(...heuresPlages.filter(h => h.debut && h.fin))
             }
         }
+
+        //gestion dates précises
+        if (datesPrecises && datesPrecisesAjoutees.length > 0) {
+            const dateJour = datesPrecisesAjoutees.find(d => d.type === 'Jour(s)') //on prend la 1ère date précise
+            const dateHeure = datesPrecisesAjoutees.find(d => d.type === 'Heure(s)') //on prend la 1ère date précise
+
+            //gestion des dates
+            if (dateJour && dateJour.valeur) {
+                const [debut, fin] = dateJour.valeur.split('|');
+                
+                if (debut && fin) {
+                    //verifier le format 
+                    if (debut.includes('-')) {
+                    //convertir du format DD-MM-YYYY vers YYYY-MM-DD pour PostgreSQL
+                        const [debutJour, debutMois, debutAnnee] = debut.split('-')
+                        const [finJour, finMois, finAnnee] = fin.split('-')
+                        dateDebutQuery = `${debutAnnee}-${debutMois}-${debutJour}`
+                        dateFinQuery = `${finAnnee}-${finMois}-${finJour}`
+                    } else { // si déjà au bon format
+                        dateDebutQuery = debut
+                        dateFinQuery = fin
+                    }
+                    
+                    //si date début = date fin, on envoie la même date pour les deux
+                    if (debut === fin) {
+                        console.log("Date unique recherchée:", dateDebutQuery);
+                    } else {
+                        console.log("Période recherchée:", dateDebutQuery, "à", dateFinQuery);
+                    }
+                }
+            }
+            //gestion des heures
+            if (dateHeure) {
+                //heure principale
+                if (dateHeure.valeur) {
+                    const [debut, fin] = dateHeure.valeur.split('-');
+                    if (debut && fin) {
+                        heuresQuery.push({ debut, fin });
+                    }
+                }
+                //heures supplémentaires
+                if (dateHeure.plagesHoraires && dateHeure.plagesHoraires.length > 0) {
+                    heuresQuery.push(...dateHeure.plagesHoraires.filter(h => h.debut && h.fin));
+                }
+            }
     }
     
         
@@ -393,11 +438,13 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     instrumentIds: instrumentsSelectionnes,
+                    //dates précises
                     dateDebut: dateDebutQuery, //mtn au format YYYY-MM-DD
                     dateFin: dateFinQuery,
-                    //anneesSelectionnees: anneesSelectionnees,
                     heuresPrecisesPlages: heuresQuery,
-                    datesPrecises : datesPrecisesAjoutees //dates entières
+                    //périodes
+                    periodes : periodesData,
+                    //datesPrecises : datesPrecisesAjoutees 
                   })
                 
             })
@@ -575,22 +622,53 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
             return (
               
               <Box>
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                  <input 
-                      type="time" 
-                      value={periode.valeur.split('-')[0] || ''} 
-                      onChange={(e) => updatePeriodeValeur(periode.id, `${e.target.value}-${periode.valeur.split('-')[1] || ''}`)} 
-                      style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
-                      placeholder="Heure début"
-                  /> 
-                  <input 
-                      type="time" 
-                      value={periode.valeur.split('-')[1] || ''} 
-                      onChange={(e) => updatePeriodeValeur(periode.id, `${periode.valeur.split('-')[0] || ''}-${e.target.value}`)} 
-                      style={{ padding: '10px', borderRadius: '4px', border: '1px solid #ccc', width: '100%' }}
-                      placeholder="Heure fin"
-                  />
-              </Stack>
+              
+              <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                            <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}></Typography>
+                            <DesktopTimePicker
+                                label="Heure de début"
+                                value={(() => {
+                                    if (!periode.valeur || periode.valeur === '') return null
+                                    const debut = periode.valeur.split('-')[0] //on récupère la 1ère heure
+                                    if (!debut || debut === '') return null //vérification heure début
+                                    const heureConv = dayjs(debut, 'HH:mm')
+                                    return heureConv.isValid() ? heureConv : null
+                                })()}
+                                onChange={(newValue) => {
+                                    if (newValue && newValue.isValid()) {
+                                        const fin = periode.valeur.split('-')[1] || '' //split les 2 heures pr récupérer l'heure de fin et si pas d'heure de fin, ''
+                                        const nouvelleValeur = `${newValue.format('HH:mm')}${fin ? `-${fin}` : ''}`
+                                        updatePeriodeValeur(periode.id, nouvelleValeur)
+                                    }
+                                }}
+
+                                format="HH:mm"
+                                ampm={false}  // pour utiliser le format 24h
+                            />
+                            <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}></Typography>
+                            <DesktopTimePicker
+                                label="Heure de fin"
+                                value={(() => {
+                                    if (!periode.valeur) return null
+                                    const fin = periode.valeur.split('-')[1]
+                                    if (!fin || fin === '') return null
+                                    const parsedHeure = dayjs(fin, 'HH:mm')
+                                    return parsedHeure.isValid() ? parsedHeure : null
+                                })()}
+                                onChange={(newValue) => {
+                                    if (newValue && newValue.isValid()) {
+                                        const debut = periode.valeur.split('-')[0] || ''
+                                        const nouvelleValeur = `${debut}${debut ? '-' : ''}${newValue.format('HH:mm')}`
+                                        updatePeriodeValeur(periode.id, nouvelleValeur)
+                                    }
+                                }}
+
+                                format="HH:mm"
+                                ampm={false}
+                            />
+                        </Stack>
+                        </LocalizationProvider>
               
               {/* Plages horaires multiples */}
               <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 2, mb: 1 }}>

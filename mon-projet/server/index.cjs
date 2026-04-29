@@ -109,10 +109,11 @@ app.post('/api/instruments/by-categories', async (req, res) => {
 
 // Route pour chercher les résultats
 app.post('/api/recherche', async (req, res) => {
-    const { instrumentIds, dateDebut, dateFin, datesPrecises, heuresPrecisesPlages } = req.body
+    const { instrumentIds, dateDebut, dateFin, heuresPrecisesPlages, periodes } = req.body
     console.log("Recherche pour ids instrument:", instrumentIds)
     console.log("date début : ", dateDebut, ", date fin : ", dateFin)
     console.log("plages horaires :", heuresPrecisesPlages)
+    console.log("périodes : ", periodes)
     try {
         const idsNumbers = instrumentIds.map(id => parseInt(id, 10))
         
@@ -150,7 +151,9 @@ app.post('/api/recherche', async (req, res) => {
         `
         
         let params = [idsNumbers]
+        let conditions = []
         
+        //filtre par dates précises
         if (dateDebut && dateFin) {
             if (dateDebut === dateFin){ //une seule date
                 query += ` AND DATE(m.date_heure) >= $2::date AND m.date_heure < ($2::date + interval '1 day')` //$2 = dateDebut
@@ -170,15 +173,54 @@ app.post('/api/recherche', async (req, res) => {
             query += ` AND DATE(m.date_heure) <= $2`
             params.push(dateFin)
     }
+        //filtre par période : jours
+        if (periodes && periodes.joursSemaine && periodes.joursSemaine.length > 0){
+            const joursMap = {
+                'lundi':1, 'mardi':2, 'mercredi':3, 'jeudi':4, 'vendredi':5, 'samedi':6, 'dimanche':0
+            }
+            const joursNum = periodes.joursSemaine.map(j=> joursMap[j.toLowerCase()]).filter(j=>j!== undefined) //met les jours en minuscules (car majuscule au début)
+            if (joursNum.length>0){
+                conditions.push(` EXTRACT(DOW FROM m.date_heure) IN (${joursNum.join(',')})`)
+            }
+        }
+        //mois
+        if (periodes && periodes.mois && periodes.mois.length > 0){
+            const moisMap = {
+                'janvier':1, 'février':2, 'mars':3, 'avril':4, 'mai':5, 'juin':6, 'juillet':7, 'août':8, 'septembre':9, 'octobre':10, 'novembre':11, 'décembre':12
+            }
+            const moisNum = periodes.mois.map(j=> moisMap[j.toLowerCase()]).filter(j=>j!== undefined) 
+            if (moisNum.length>0){
+                conditions.push(` EXTRACT(MONTH FROM m.date_heure) IN (${moisNum.join(',')})`)
+            }
+        }
+        //années
+        if (periodes && periodes.annees && periodes.annees.length > 0){
+            
+                conditions.push(` EXTRACT(YEAR FROM m.date_heure) IN (${periodes.annees.join(',')})`)
+        }
+        //conditions ajoutées à la requête
+        if (conditions.length > 0){
+            query += ` AND ${conditions.join(' AND ')}`
+        }
         
         query += ` ORDER BY i.id_instrument, m.date_heure ASC LIMIT 100`
         
+        console.log("requete sql : ", query) 
+        console.log("params : ", params)
+        
         const result = await client.query(query, params)
 
-        //si choix d'heures en plus :
+        //filtre par heures (périodes ou dates précises)
+        let heuresAFiltrer = [...(heuresPrecisesPlages || [])]
+        
+        //ajouter les heures récurrentes de la période
+        if (periodes && periodes.heures && periodes.heures.length > 0) {
+            heuresAFiltrer.push(...periodes.heures)
+        }
+
         let mesuresFiltrees = result.rows
         
-        if (heuresPrecisesPlages && heuresPrecisesPlages.length > 0) { 
+        if (heuresAFiltrer.length > 0) { 
             mesuresFiltrees = result.rows.filter(row => {
                 if (!row.date_heure) return false
                 
@@ -188,13 +230,13 @@ app.post('/api/recherche', async (req, res) => {
                 const heureMinute = `${heure.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}` //convertit en char fomat "HH:mm" avec 2 chiffres HH et mm (si 9 > 09)
                 
                 // verif si l'heure correspond à au moins une des plages
-                return heuresPrecisesPlages.some(plage => {
+                return heuresAFiltrer.some(plage => {
                     if (!plage.debut || !plage.fin) return false
                     return heureMinute >= plage.debut && heureMinute <= plage.fin
                 })
             })
             
-            //console.log(`Filtrage par heure: ${result.rows.length} → ${mesuresFiltrees.length} résultats`)
+            console.log(`Filtrage par heure:  ${result.rows.length} > ${mesuresFiltrees.length} résultats`)
         }
         
         // s'il y a des entêtes, on récupère les noms
