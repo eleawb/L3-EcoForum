@@ -45,6 +45,8 @@ const client = new Client({
   }) //tout le monde a son fichier .env avec son user+mdp au lieu de chacun envoyer sur sa bdd
 
 client.connect()
+    .then(() => console.log('Connecté à PostgreSQL'))
+    .catch(err => console.error('Erreur de connexion:', err))
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////R O U T E S/////////////////////////////////////////////////////////
