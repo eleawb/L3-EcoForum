@@ -1,5 +1,5 @@
 {
-    "chemin_source" : "C:\\Users\\Aurore\\Projet_EcoForum\\Hobo\\(n°02) 21150037  2026-01-28 15_41_19 CET.xlsx",
+    "chemin_source" : ".\\Hobo\\(n°02) 21150037  2026-01-28 15_41_19 CET.xlsx",
     "type_source" : "fichier_mesure",
     "script" : "integration",
     "est_responsable_fichier" : false,
