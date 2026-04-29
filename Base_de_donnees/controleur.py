@@ -3,8 +3,12 @@ import sys
 import subprocess
 import json
 
+reponse = r".\Base_de_donnees\reponse_verif.json"
+
 if len(sys.argv)!=2:                                             #Respectivement if len(sys.argv)!=3:
-    sys.exit("Usage : python ./controleur.py metadonnees.json")       #sys.exit("Usage : python ./controleur.py mesure.csv/xlsx metadonnees.json")
+    with open(reponse, 'w', encoding="utf-8") as r:
+        json.dump({"réussite":False, "commentaire":"Usage : python ./controleur.py metadonnees.json"}, r)       #json.dump({"réussite":False, "commentaire":"Usage : python ./controleur.py mesure.csv/xlsx metadonnees.json"}, f)
+    sys.exit(reponse)
 
 #Si l'on veut séparer le chemin du fichier de mesure du fichier en json :
 #arg1 = sys.argv[1]  #Argument 1, le chemin du fichier de mesure, exemple : r".\Base_de_donnees\data_95224601_2024_11_19_0.csv"
@@ -19,18 +23,22 @@ with open(arg, encoding="utf-8") as f:
             try:
                 retour = subprocess.run(["python", "./Base_de_donnees/integration_donnees_"+metadonnees["nom_outil"].lower()+".py", arg], shell=True, capture_output=True, text=True, check=True)
                 #éxécution du script en permettant de stocker la valeur de "retour"(les print)
-                print(retour.stdout)           #"Retour" de notre script si tout s'est bien passé
+                sys.exit(retour.stdout)           #"Retour" de notre script si tout s'est bien passé
             except subprocess.CalledProcessError as e:
-                print(f"La commande d'intégration des données a échoué avec le code d'erreur : {e.returncode}")
+                with open(reponse, 'w', encoding="utf-8") as r:
+                    json.dump({"réussite":False, "commentaire":f"La commande d'intégration des données a échoué avec le code d'erreur : {e.returncode}"}, r)
+                print(reponse)
                 #"Retour" de notre script si tout ne s'est pas bien passé
                 #print(e.stderr)            #Si l'on veut voir tout le message d'erreur effectuer par le script défectueux
                 #sys.exit(e.stdout)         #Si l'on veut voir tout les print effectuer par le script défectueux
         case "vérification":                   #Cas où le script à éxécuter est le script de vérification
             try:
                 retour = subprocess.run(["python", "./Base_de_donnees/verification_donnees_"+metadonnees["nom_outil"].lower()+".py", arg], shell=True, capture_output=True, text=True, check=True)
-                print(retour.stdout)           #"Retour" de notre script si tout s'est bien passé
+                sys.exit(retour.stdout)           #"Retour" de notre script si tout s'est bien passé
             except subprocess.CalledProcessError as e:
-                print(f"La commande de vérification des données a échoué avec le code d'erreur : {e.returncode}")
+                with open(reponse, 'w', encoding="utf-8") as r:
+                    json.dump({"réussite":False, "commentaire":f"La commande de vérification des données a échoué avec le code d'erreur : {e.returncode}"}, r)
+                print(reponse)
                 #"Retour" de notre script si tout ne s'est pas bien passé
                 #print(e.stderr)            #Si l'on veut voir tout le message d'erreur effectuer par le script défectueux
                 #sys.exit(e.stdout)         #Si l'on veut voir tout les print effectuer par le script défectueux
@@ -52,9 +60,11 @@ with open(arg, encoding="utf-8") as f:
             try:
                 retour = subprocess.run(["python", "./integration_metadonnees.py"]+args, shell=True, capture_output=True, text=True, check=True)
                 #éxécution du script en permettant de stocker la valeur de "retour"(les print)
-                print(retour.stdout)           #"Retour" de notre script si tout s'est bien passé
+                sys.exit(retour.stdout)           #"Retour" de notre script si tout s'est bien passé
             except subprocess.CalledProcessError as e:
-                print(f"La commande d'intégration des métadonnées a échoué avec le code d'erreur : {e.returncode}")
+                with open(reponse, 'w', encoding="utf-8") as r:
+                    json.dump({"réussite":False, "commentaire":f"La commande d'intégration des métadonnées a échoué avec le code d'erreur : {e.returncode}"}, r)
+                print(reponse)
                 #"Retour" de notre script si tout ne s'est pas bien passé
                 #print(e.stderr)               #Si l'on veut voir tout le message d'erreur effectuer par le script défectueux
                 #sys.exit(e.stdout)            #Si l'on veut voir tout les print effectuer par le script défectueux
@@ -70,14 +80,18 @@ with open(arg, encoding="utf-8") as f:
                         args.append(f"--ficLoc {metadonnees["fichier_données"][i]}")
                     case "projet":
                         if "personne" not in metadonnees["type_script"]:
-                            sys.exit("Pas de vérification de projet sans vérification de personne")
+                            with open(reponse, 'w', encoding="utf-8") as r:
+                                json.dump({"réussite":False, "commentaire":"Pas de vérification de projet sans vérification de personne"}, r)
+                            sys.exit(reponse)
                         args.append(f"--ficProj {metadonnees["fichier_données"][i]}")
             try:
                 retour = subprocess.run(["python", "./Base_de_donnees/verification_metadonnees.py"]+args, shell=True, capture_output=True, text=True, check=True)
                 #éxécution du script en permettant de stocker la valeur de "retour"(les print)
-                print(retour.stdout)           #"Retour" de notre script si tout s'est bien passé
+                sys.exit(retour.stdout)           #"Retour" de notre script si tout s'est bien passé
             except subprocess.CalledProcessError as e:
-                print(f"La commande de vérification des métadonnées a échoué avec le code d'erreur : {e.returncode}")
+                with open(reponse, 'w', encoding="utf-8") as r:
+                    json.dump({"réussite":False, "commentaire":f"La commande de vérification des métadonnées a échoué avec le code d'erreur : {e.returncode}"}, r)
+                print(reponse)
                 #"Retour" de notre script si tout ne s'est pas bien passé
                 #print(e.stderr)               #Si l'on veut voir tout le message d'erreur effectuer par le script défectueux
                 #sys.exit(e.stdout)            #Si l'on veut voir tout les print effectuer par le script défectueux
