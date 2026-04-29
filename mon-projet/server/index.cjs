@@ -34,6 +34,10 @@ const client = new Client({
 */
 client.connect()
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////R O U T E S/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 // Route pour récupérer tous les instruments
 app.get('/api/instruments', async (req, res) => {
@@ -317,7 +321,7 @@ app.post('/api/recherche', async (req, res) => {
        res.status(500).json({ error: err.message })
    }
 })
-
+//Route pour la creation de nouveau responsable fichiers
 //Envoi des information du form pour la creation d-un nouveau responable_fichier
 app.post('/api/responsable_fichier', async (req, res) => {
   const { nom, prenom, email, fonction } = req.body;
@@ -346,9 +350,50 @@ app.post('/api/responsable_fichier', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 })
+////////////Stockage du fichier televerse
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
+// Configure storage
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, 'uploads');
+    //Cree un dossier sil nexiste pas
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+   
+    cb(null, file.originalname);
+  }
+});
 
+const upload = multer({ storage: storage });
 
+//Stockage Fichier
+app.post('/api/upload', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    //Recuperer l information du fichier
+    res.status(200).json({
+      message: 'fichier sauvegarde',
+      file: {
+        originalName: req.file.originalname,
+        storedName: req.file.filename,
+        path: req.file.path,
+        size: req.file.size
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreure Sauvegarde' });
+  }
+});
 
 app.listen(port, () => {
     console.log(`Serveur démarré sur http://localhost:${port}`)
