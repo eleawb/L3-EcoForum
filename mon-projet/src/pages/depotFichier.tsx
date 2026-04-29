@@ -41,6 +41,7 @@ function DepotFichier(){
     const [numInstrument, setNumInstrument] = useState<string>('');
     const [modele, setModele] = useState<string>('');
     const [responsables, setResponsablesDisponibles] = useState([]);
+    const [isNewResponsable, setIsNewResponsable] = useState<boolean>(false);//Check si le repssable fichier fut cree pour cet ajout
 
     const isFormComplete = selectedInstrument !== '';
     const areAdditionalInputsComplete = 
@@ -101,7 +102,7 @@ useEffect(() => {
 
                 if (response.ok) {
                   const data = await response.json();
-                  alert("Responsable fichier créé avec succès!");
+                  //alert("Responsable fichier créé avec succès!");
                   
                   // recharger la liste des responsables fichiers disponibles dans la BDD
                   fetchData();
@@ -113,6 +114,8 @@ useEffect(() => {
                   setShowCreationRespInputs(false);
                   //Selection automatique du responsable cree
                   setSelectedResponsable(data.email);
+                  setIsNewResponsable(true);//sets la valeur de NewResponsable a true
+
                 } else {
                   const error = await response.json();
                   alert(`Erreur: ${error.message}`);
@@ -125,7 +128,73 @@ useEffect(() => {
             
 /* 
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-*/
+//Generation du JSONfile a envoyer*/
+const generateJSONFile = () => {
+  //format de la date demande pour le JSON  =  YYYY-MM-DD HH:MM:SS 
+  const getCurrentDateTime = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  };
+
+  //Ajout de les heures et minutes mis a 0 pour match le format demande
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return '';
+    if (dateStr.includes(' ')) return dateStr;
+    return `${dateStr} 00:00:00`;
+  };
+
+  // Find the instrument object to get num_instrument
+  const selectedInstrumentObj = instruments.find(
+    instrument => instrument.nom_outil === selectedInstrument
+  );
+
+  // Find the responsable object to get nom, prenom, fonction, encadre_par
+  const selectedResponsableObj = responsables.find(
+    responsable => responsable.adresse_mail === selectedResponsable
+  );
+
+  const formData = {
+    chemin_source: selectedFile ? selectedFile.name : "",
+    type_source: typeSource,
+    script: "integration",
+    est_responsable_fichier: !isNewResponsable, // on determine si le responsable a ete cree recement
+    mail_responsable: selectedResponsable,
+    nom: selectedResponsableObj?.nom || "",
+    prenom: selectedResponsableObj?.prenom || "",
+    fonction: "Respons  able Fichier",
+    encadre_par: [], // vide, pas implemente
+    nom_outil: selectedInstrument,
+    num_instrument: selectedInstrumentObj?.num_instrument || numInstrument,
+    num_serie: numSerie,
+    extension: extension,
+    date_recueil: formatDateTime(dateCueilli),
+    date_import: formatDateTime(dateImport || getCurrentDateTime()),
+    commentaire: ""
+  };
+
+  //Convertir au format JSON
+  const jsonString = JSON.stringify(formData, null, 2);
+  
+  //Creer le fichier //telecharger le fichier, actuellement para probar
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `depot_fichier_${Date.now()}.json`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  
+  //alert("Fichier JSON généré avec succès!");
+};
+
 
     const autoFillSerialNumber = (selectedInstrumentName: string) => {
     // Trouver les instruments dans le data on a recupere
@@ -154,6 +223,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
   const ResponsableChange = (event: SelectChangeEvent) => {
     const selectedValue = event.target.value;
     setSelectedResponsable(selectedValue);
+    setIsNewResponsable(false);//Remet le flag a false quand on prend un responsable autre que celui nouvellement cree
 };
 
     //fonction pour extraire et formater la date a partir du nom du fichier base sur le type de linstrument
@@ -334,6 +404,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
         alert('Veuillez remplir tous les champs');
         return;
       }
+      generateJSONFile();
       
       console.log('Uploading file:', selectedFile.name);
       console.log('Instrument:', selectedInstrument);
@@ -558,12 +629,12 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                     bgcolor: (isFormComplete && selectedFile && areAdditionalInputsComplete) ? '#EC9706' : '#CCCCCC',
                     '&:hover': {
                       bgcolor: (isFormComplete && selectedFile && areAdditionalInputsComplete) ? '#C78023' : '#CCCCCC',
-                    },//Tengo que velar a que cuando nos estan activos los campos de la creation del referent fichier
-                    //todavia se pueda mandar el formulario pq no son considerados como espacios vacios
+                    },
                   }}
                 >
                   Déposer
                 </Button>
+
               </Stack>
             </form>
           </Paper>

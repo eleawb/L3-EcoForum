@@ -1,4 +1,4 @@
-import { useState } from 'react'; 
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'; //pr navigation
 import { Search as SearchIcon, Add as AddIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import {
@@ -14,41 +14,62 @@ import {
   TextField,
   Stack, //aligner boutons en colonne par ex
   FormControl,
+  FormControlLabel,
+  FormLabel,
   InputLabel,
   Select,
+  Checkbox,
   MenuItem
 } from '@mui/material'; //import MUI
 import { SelectChangeEvent } from '@mui/material/Select';
 
 function SaisieManuelle(){
-const navigate = useNavigate();
+const navigate = useNavigate()
+    const [chargement, setChargement] = useState(true) //boucle de chargement si la récupération initiale des instruments de la bdd est trop long ou pb infini
+    const [instrumentsDisponibles, setInstrumentsDisponibles] = useState<any[]>([]) //instruments disponibles selon la catégorie / bdd en général
+    //choix instruments
+    const [instrumentsSelectionnes, setInstrumentsSelectionnes] = useState<string[]>([]) //récupérer les instruments sélectionnés par l'user
 
-//Les etats des selections du form 
-const [selectedInstrument, setSelectedInstrument] = useState<string>('');
-const [selectedCapteur, setSelectedCapteur] = useState<string>('');
-
-//Verifier si les 2 selects ont des valeurs non nulles
-const isFormComplete = selectedInstrument !== '' && selectedCapteur !== '';
-
-//handle submit
-const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    
-    if (!isFormComplete) {
-      return;
-    }
-  };
-
-  //Traitement des changements sur les Selects
-    const handleInstrumentChange = (event: SelectChangeEvent) => {
-    setSelectedInstrument(event.target.value);
-    };
+    useEffect(() => {
+            const fetchData = async () => {
+                console.log("début du fetch data")
+                try {
+                      const instrumentsRes = await fetch('http://localhost:3000/api/instruments') //récupérer les instruments de la bdd
+                      const instrumentsData = await instrumentsRes.json() //conversion 
+                      setInstrumentsDisponibles(instrumentsData || []) //si pas de données, on laisse vide
+                    }
+                    catch (error) {
+                      console.error('Erreur lors du chargement des données:', error)
+                      setChargement(false)
+                    }
+                }
+        fetchData()
+    }, [])
   
-    const handleCapteurChange = (event: SelectChangeEvent) => {
-    setSelectedCapteur(event.target.value);
-    };
 
+// gestion de la sélection d'un instrument
+// au lieu de stocker les noms, on stocke les ids (plus sûr)
+const InstrumentSelection = (valeurId: number) => {
+  setInstrumentsSelectionnes(prev => {
+      if (prev.includes(valeurId.toString())) {
+          return prev.filter(v => v !== valeurId.toString())
+      } else {
+          return [...prev, valeurId.toString()]
+      }
+  })
+}
 
+//Buton de submit
+const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        
+        if (instrumentsSelectionnes.length===0) {
+            alert('Veuillez sélectionner au moins un instrument')
+            return
+        }
+      }
+
+/*const listeInstruments =  instrumentsDisponibles*/
 
 return(
 
@@ -71,35 +92,28 @@ return(
                 </Typography>
                 <form onSubmit={handleSubmit}>
                     <Stack spacing={3}>
-                        <FormControl fullWidth required>
-                        <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
-                        <Select
-                        value={selectedInstrument}
-                        onChange={handleInstrumentChange}
-                        label="Sélectionnez l'instrument pour lequel vous souhaitez compléter un fichier">
-                        
-                        {/* Estos menu Items son temporales despues hay que load los de la BDD */}
-                        <MenuItem value="instrument1">Instrument 1</MenuItem>
-                        <MenuItem value="instrument2">Instrument 2</MenuItem>
-                        <MenuItem value="instrument3">Instrument 3</MenuItem>
-                        </Select>
-                        </FormControl>
 
-
-
-                        <FormControl fullWidth required>
-                        <InputLabel>Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier</InputLabel>
-                        <Select
-                        value={selectedCapteur}
-                        onChange={handleCapteurChange}
-                        label="Sélectionnez le capteur pour lequel vous souhaitez déposer un fichier">
-
-                        <MenuItem value="capteur1">Capteur 1</MenuItem>
-                        <MenuItem value="capteur2">Capteur 2</MenuItem>
-                        <MenuItem value="capteur3">Capteur 3</MenuItem>
-
-                        </Select>
-                        </FormControl>
+                      {/*Sélection de l'instrument*/}
+                                  <FormControl component="fieldset" required sx={{ mb: 2 }}>
+                                  <FormLabel component="legend">Sélectionnez un ou plusieurs instruments</FormLabel>
+    
+                                  {/* Liste des instruments */}
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                            {instrumentsDisponibles.map((item) => (
+                                                <FormControlLabel
+                                                    key={item.id_instrument}
+                                                    control={
+                                                        <Checkbox
+                                                            checked={instrumentsSelectionnes.includes(item.id_instrument.toString())}
+                                                            onChange={() => InstrumentSelection(item.id_instrument)}
+                                                            size="small"
+                                                        />
+                                                    }
+                                                    label={`${item.nom_outil || item.modele} - ${item.num_instrument || ''}`}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </FormControl>
 
                         <Button
                         type="submit"
@@ -107,16 +121,7 @@ return(
                         onClick={() => navigate('/ajoutligne')}
                         startIcon={<AddIcon />}
                         size="large"
-                        disabled={!isFormComplete}
-                        sx={{
-                        bgcolor: !isFormComplete ? '#CCCCCC' : '#EC9706',
-                        color: !isFormComplete ? '#666666' : '#FFFFFF',
-                        py:1.5,
-                        '&:hover': {bgcolor: !isFormComplete ? '#CCCCCC' : '#C78023',}, //qd on passe dessus
-                        }}
-                    >AJOUTER DES LIGNES 
-                    
-                    {!isFormComplete ? ' Sélectionnez d\'abord instrument et capteur' : 'Parcourir pour sélectionner un fichier'}
+                        >AJOUTER DES LIGNES 
                     </Button>
                     </Stack>
                </form>         

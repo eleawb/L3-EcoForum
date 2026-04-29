@@ -8,7 +8,7 @@ const port = 3000
 app.use(cors())
 app.use(express.json())
 
-/* bdd fictive francisco
+/* bdd fictive francisco*/
 const client = new Client({
     host: "localhost",
     user: "postgres",
@@ -16,11 +16,11 @@ const client = new Client({
     password: "post",
     database: "postgres"    
 
-});*/
+});
 
 
 //bdd fictive elea
-const client = new Client({
+/*const client = new Client({
     host: "localhost",
     user: "eleaweber",
     port: 5432,
@@ -31,7 +31,7 @@ const client = new Client({
     database : "EcoForumV3" //bdd maj 27/04
 
 })
-
+*/
 client.connect()
 
 
