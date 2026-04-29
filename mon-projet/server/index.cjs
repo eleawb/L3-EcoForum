@@ -432,7 +432,7 @@ const upload = multer({ storage: storage });
 app.post('/api/upload', upload.single('file'), (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+      return res.status(400).json({ error: 'No file uploaded' })
     }
 
     //Recuperer l information du fichier
@@ -446,10 +446,11 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ error: 'Erreure Sauvegarde' });
+    res.status(500).json({ error: 'Erreure Sauvegarde' })
   }
-});
+})
 
 app.listen(port, () => {
     console.log(`Serveur démarré sur http://localhost:${port}`)
 })
+
