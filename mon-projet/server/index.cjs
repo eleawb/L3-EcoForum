@@ -1,3 +1,5 @@
+require('dotenv').config()
+
 const express = require('express')
 const cors = require('cors')
 const { Client } = require('pg')
@@ -8,7 +10,7 @@ const port = 3000
 app.use(cors())
 app.use(express.json())
 
-/* bdd fictive francisco*/
+/* bdd fictive francisco
 const client = new Client({
     host: "localhost",
     user: "postgres",
@@ -17,6 +19,7 @@ const client = new Client({
     database: "postgres"    
 
 });
+*/
 
 
 //bdd fictive elea
@@ -32,7 +35,20 @@ const client = new Client({
 
 })
 */
+//test serveur pour tout le monde
+const client = new Client({
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    port: 5432,
+  }) //tout le monde a son fichier .env avec son user+mdp au lieu de chacun envoyer sur sa bdd
+
 client.connect()
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////R O U T E S/////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 // Route pour récupérer tous les instruments
@@ -360,9 +376,10 @@ app.post('/api/recherche', async (req, res) => {
    }
 })
 
+//Route pour la creation de nouveau responsable fichiers
 //Envoi des information du form pour la creation d-un nouveau responable_fichier
 app.post('/api/responsable_fichier', async (req, res) => {
-  const { nom, prenom, email, fonction } = req.body;
+  const { nom, prenom, email, fonction } = req.body
   
   try {
     // Insertion de la nouvelle personne cree
@@ -371,23 +388,69 @@ app.post('/api/responsable_fichier', async (req, res) => {
        VALUES ($1, $2, $3, $4)
        RETURNING id_personne`,
       [nom, prenom, email, fonction]
-    );
-    const id_personne = result.rows[0].id_personne;
+    )
+    const id_personne = result.rows[0].id_personne
     // Insertion de la personne cree a la table de responsable_fichier
     await client.query(
       `INSERT INTO responsable_fichier (id_responsable)
        VALUES ($1)`,
       [id_personne]
-    );
+    )
     res.status(201).json({ 
       message: "Créé avec succès", 
       id_personne, 
       email 
-    });
+    })
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message })
   }
 })
+
+////////////Stockage du fichier televerse
+const multer = require('multer')
+const path = require('path')
+const fs = require('fs')
+
+// Configure storage
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, 'uploads')
+    //Cree un dossier sil nexiste pas
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true })
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+   
+    cb(null, file.originalname);
+  }
+})
+
+const upload = multer({ storage: storage })
+
+//Stockage Fichier
+app.post('/api/upload', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' })
+    }
+
+    //Recuperer l information du fichier
+    res.status(200).json({
+      message: 'fichier sauvegarde',
+      file: {
+        originalName: req.file.originalname,
+        storedName: req.file.filename,
+        path: req.file.path,
+        size: req.file.size
+      }
+    })
+  } catch (error) {
+    res.status(500).json({ error: 'Erreure Sauvegarde' })
+  }
+})
+
 
 
 
