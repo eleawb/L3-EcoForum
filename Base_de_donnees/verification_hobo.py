@@ -192,7 +192,7 @@ def verification_hobo(metajson):
             print(json.dumps(dico))
 
     dico["reussite"] = True
-    dico["commentaire"] = "La vérification du fichier a terminé sans problèmes"
+    dico["commentaire"] = ""
     dico["extension"] = rows[0][1]
     dico["numero_serie"] = rows[0][11]
     dico["date_import"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")

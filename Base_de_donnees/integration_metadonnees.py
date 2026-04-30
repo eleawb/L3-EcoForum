@@ -231,7 +231,7 @@ def integration_fichier_metadonnees(ficPers, ficInstr, ficLoc, ficProj):
     #insère groupe récolte - mais je pense que c'est pas possible car il va manquer des attributs pour les reconnaître sans utiliser l'id qu'ils ont dans la base
     #il faudrait peut-être ajouter un nom UNIQUE ?
 
-    dico["commentaire"] = "L'intégration des métadonnées a terminé sans problèmes"
+    dico["commentaire"] = ""
     dico["reussite"] = True
     print(json.dumps(dico))
 

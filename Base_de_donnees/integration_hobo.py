@@ -254,7 +254,7 @@ def integration_hobo(ficjson):
                 #il n'y a pas de capteurs localisés tq date_fin > dateMesure == on ne peut plus intégrer les données
                 elif capt_loc_passe == []:
                     #print(f"impossibilité d'intégrer les données à partir de {ligne[0]}, il n'y a plus aucun capteurs localisés avec une date de fin > {dateMesure}, si vous voulez continuer d'intégrer les données, il va falloir étendre la durée d'un capteur à une localisation ou actualiser la localisation d'un capteur ^u^")
-                    dico["commentaire"] = "impossibilité d'intégrer les données à partir de " + ligne[0] + "il n'y a plus aucun capteurs localisés avec une date de fin > " + dateMesure + ", si vous voulez continuer d'intégrer les données, il va falloir étendre la durée d'un capteur à une localisation ou actualiser la localisation d'un capteur"
+                    dico["commentaire"] = "impossibilité d'intégrer les données à partir de " + ligne[0] + " il n'y a plus aucun capteurs localisés avec une date de fin > " + dateMesure + ", si vous voulez continuer d'intégrer les données, il va falloir étendre la durée d'un capteur à une localisation ou actualiser la localisation d'un capteur"
                     print(json.dumps(dico))
                     break
 
@@ -405,7 +405,7 @@ def integration_hobo(ficjson):
                 #print("insertion sdst réussie")
             #print(len(id_series_t))
             dico["reussite"] = True
-            dico["commentaire"] = "l'intégration des données s'est bien passée et a terminée sans problèmes"
+            dico["commentaire"] = ""
             print(json.dumps(dico))
 
 
