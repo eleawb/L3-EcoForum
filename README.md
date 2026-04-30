@@ -34,9 +34,9 @@ normalement .env est ajouté dans .gitignore pour ne pas que le fichier soit pus
 
 ENSUITE :
 
-- sur pgAdmin : créer une bdd vide EcoForumV4, clic droit sur la base, "Query Tool", Menu File, Open, choisir EcoForumV4.sql
+- soit sur pgAdmin : créer une bdd vide EcoForumV4, clic droit sur la base, "Query Tool", Menu File, Open, choisir EcoForumV4.sql
 Cliquer sur le bouton Execute / Play (triangle noir)
-- ligne de cmd : psql -U postgres -d EcoForumV4 -f EcoForumV4.sql
+- soit ligne de cmd : psql -U postgres -d EcoForumV4 -f EcoForumV4.sql
 
 se mettre dans /mon-projet
 pour lancer le client et le serveur en simultané : lancer "npm run dev:all"
