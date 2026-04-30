@@ -98,7 +98,7 @@ def verification_hobo(metajson):
     """
     Prend en entrée un fichier json de la forme suivante :
     {"script": "verification", 
-    "fichier_mesure": "chemin\\(n\u00b036) 21149857 2026-01-28 15_37_05 CET.xlsx",
+    "chemin_source": "chemin\\(n\u00b036) 21149857 2026-01-28 15_37_05 CET.xlsx",
     "nom_outil": "HOBO", 
     "num_instrument": "HOBO_n°36"}
     """
@@ -156,9 +156,11 @@ def verification_hobo(metajson):
                             #print("nom de colonne différent str")
                             dico["commentaire"] = "nom de la colonne n°" + i + "différent, nom attendu : " + lcols[i]
                             #return dico
-                            with open("retour.json", "w", encoding="utf-8") as f:
-                                json.dump(dico, f, indent=4, ensure_ascii=False)
-                            print(os.path.join(os.getcwd(), "retour.json"))
+                            #with open("retour.json", "w", encoding="utf-8") as f:
+                                #json.dump(dico, f, indent=4, ensure_ascii=False)
+                            #print(os.path.join(os.getcwd(), "retour.json"))
+                            print(json.dumps(dico))
+
                         #else:
                             #print("bon nom de colonne str")
                     elif isinstance(lcols[i], list):
@@ -172,21 +174,25 @@ def verification_hobo(metajson):
                         if memecol == False:
                             #print("nom de colonne différent list")
                             dico["commentaire"] = "nom de la colonne n°" + i + "différent, noms attendus : " + lcols[i]
-                            with open("retour.json", "w", encoding="utf-8") as f:
-                                json.dump(dico, f, indent=4, ensure_ascii=False)
-                            print(os.path.join(os.getcwd(), "retour.json"))
+                            #with open("retour.json", "w", encoding="utf-8") as f:
+                            #    json.dump(dico, f, indent=4, ensure_ascii=False)
+                            #print(os.path.join(os.getcwd(), "retour.json"))
+                            print(json.dumps(dico))
             else :
                 dico["commentaire"] = "le fichier ne contient pas le bon nombre de colonnes, nombre attendu : " + row[3]
-                with open("retour.json", "w", encoding="utf-8") as f:
-                    json.dump(dico, f, indent=4, ensure_ascii=False)
-                print(os.path.join(os.getcwd(), "retour.json"))
+                #with open("retour.json", "w", encoding="utf-8") as f:
+                #    json.dump(dico, f, indent=4, ensure_ascii=False)
+                #print(os.path.join(os.getcwd(), "retour.json"))
+                print(json.dumps(dico))
         else:
             dico["commentaire"] = "Le nom du fichier n'a pas le bon format, format attendu : " + row[5]
-            with open("retour.json", "w", encoding="utf-8") as f:
-                json.dump(dico, f, indent=4, ensure_ascii=False)
-            print(os.path.join(os.getcwd(), "retour.json"))
+            #with open("retour.json", "w", encoding="utf-8") as f:
+            #    json.dump(dico, f, indent=4, ensure_ascii=False)
+            #print(os.path.join(os.getcwd(), "retour.json"))
+            print(json.dumps(dico))
 
     dico["reussite"] = True
+    dico["commentaire"] = "La vérification du fichier a terminé sans problèmes"
     dico["extension"] = rows[0][1]
     dico["numero_serie"] = rows[0][11]
     dico["date_import"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -203,9 +209,10 @@ def verification_hobo(metajson):
     #print("Format standard :", clean_dt)
     dico["date_recueil"] = clean_dt
     dico["type_source"] = "fichier_mesure"
-    with open("retour.json", "w", encoding="utf-8") as f:
-        json.dump(dico, f, indent=4, ensure_ascii=False)
-    print(os.path.join(os.getcwd(), "retour.json"))
+    #with open("retour.json", "w", encoding="utf-8") as f:
+    #    json.dump(dico, f, indent=4, ensure_ascii=False)
+    #print(os.path.join(os.getcwd(), "retour.json"))
+    print(json.dumps(dico))
 
 
 if __name__ == "__main__":
@@ -218,9 +225,10 @@ if __name__ == "__main__":
         dico = {}
         dico["commentaire"] = "Usage : ./verification_hobo.py JSON/verification_Hobo.json"
         dico["reussite"] = False
-        with open("retour.json", "w", encoding="utf-8") as f:
-            json.dump(dico, f, indent=4, ensure_ascii=False)
-        print(os.path.join(os.getcwd(), "retour.json"))
+        #with open("retour.json", "w", encoding="utf-8") as f:
+            #json.dump(dico, f, indent=4, ensure_ascii=False)
+        #print(os.path.join(os.getcwd(), "retour.json"))
+        print(json.dumps(dico))
 
     else :
 
@@ -247,7 +255,7 @@ if __name__ == "__main__":
         #Création du curseur qui nous permettra de faire les requêtes
         cur = conn.cursor()
 
-        verification_hobo(args.json)
+        verification_hobo(sys.argv[1])
 
         # Fermeture curseur et connexion à la base
         cur.close()

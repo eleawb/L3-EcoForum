@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 import argparse
 from dotenv import load_dotenv #ajout
+import json
 
 
 def format_date(date):
@@ -35,7 +36,19 @@ def integration_fichier_metadonnees(ficPers, ficInstr, ficLoc, ficProj):
 
     #pour obtenir le chemin jusqu'au repertoire dans lequel se trouve ce programme (car dans mon cas les fichiers .xlsx y sont aussi)
     #s'ils n'y sont pas dans la version finale, il faudra donner dans chemin le chemin vers le répertoire où ils sont stockés
-    chemin = os.path.join(os.getcwd(), "Fichiers_metadonnees")
+    
+    dico = {
+        "reussite" : False,
+        "commentaire" : "",
+    }
+    
+    if Path(os.getcwd()).stem == "projet-l3-ecoforum":
+        chemin = os.path.join(os.getcwd(), "Base_de_donnees","Fichiers_metadonnees")
+    elif Path(os.getcwd()).stem == "Base_de_donnees":
+        chemin = os.path.join(os.getcwd(),"Fichiers_metadonnees")
+    else :
+        dico["commentaire"] = "Je ne sais pas d'où je suis lancé... (donc je ne sais pas comment ajuster le chemin vers le dossier contenant les fichiers de métadonnées)"
+        print(json.dumps(dico))
 
     #Ouverture de tous les fichiers .xlsx de métadonnées avec pandas + récupération dans des listes des noms des onglets
     dfPers = pd.read_excel(os.path.join(chemin, ficPers), sheet_name=None)
@@ -217,6 +230,10 @@ def integration_fichier_metadonnees(ficPers, ficInstr, ficLoc, ficProj):
 
     #insère groupe récolte - mais je pense que c'est pas possible car il va manquer des attributs pour les reconnaître sans utiliser l'id qu'ils ont dans la base
     #il faudrait peut-être ajouter un nom UNIQUE ?
+
+    dico["commentaire"] = "L'intégration des métadonnées a terminé sans problèmes"
+    dico["reussite"] = True
+    print(json.dumps(dico))
 
 if __name__ == "__main__" :
 
