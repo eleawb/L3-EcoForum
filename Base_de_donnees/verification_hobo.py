@@ -115,7 +115,7 @@ def verification_hobo(metajson):
         "date_recueil" : "",
         "reussite" : False,
         "commentaire" : "",
-        "date_import" : "",
+        #"date_import" : "",
         "type_source" : "",
     }
 
@@ -195,7 +195,7 @@ def verification_hobo(metajson):
     dico["commentaire"] = ""
     dico["extension"] = rows[0][1]
     dico["numero_serie"] = rows[0][11]
-    dico["date_import"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #dico["date_import"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     pattern = r"([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}_[0-9]{2}_[0-9]{2}) (?=CET\.xlsx)"
 
     match = re.search(pattern, data["chemin_source"])
