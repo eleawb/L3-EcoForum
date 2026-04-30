@@ -50,7 +50,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
   const [typeSource, setTypeSource] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const FirstFormComplete = selectedInstrument !== '' && numInstrument !== '' &&  typeSource !== '';
+  const FirstFormComplete = selectedInstrument !== '' && numInstrument !== '';
   const areAdditionalInputsComplete = utilisateur !== '';
 /*
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -255,19 +255,6 @@ return(
               }}
             />
 
-              <FormControl fullWidth required>
-                  <InputLabel>Type source</InputLabel>
-                  <Select
-                    value={typeSource}
-                    onChange={(e) => setTypeSource(e.target.value)}
-                    label="Type source"
-                  >
-                  <MenuItem value="fichier_mesure">fichier_mesure</MenuItem>
-                  <MenuItem value="dossier_audio">dossier_audio</MenuItem>
-                  <MenuItem value="dossier_image">dossier_image</MenuItem>
-                  </Select>
-              </FormControl>
-
               <Button
                   type="button"
                   variant="contained"
@@ -421,6 +408,19 @@ return(
                         placeholder="E  u fichier"
                       />
                     </Stack>
+
+                    <FormControl fullWidth required>
+                    <InputLabel>Type source</InputLabel>
+                    <Select
+                      value={typeSource}
+                      onChange={(e) => setTypeSource(e.target.value)}
+                      label="Type source"
+                    >
+                    <MenuItem value="fichier_mesure">fichier_mesure</MenuItem>
+                    <MenuItem value="dossier_audio">dossier_audio</MenuItem>
+                    <MenuItem value="dossier_image">dossier_image</MenuItem>
+                    </Select>
+                    </FormControl>
                   
                   </>
                 )}
