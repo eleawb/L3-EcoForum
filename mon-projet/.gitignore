@@ -1,3 +1,10 @@
+# Variables d'environnement (identifiants BDD)
+.env
+.env.local
+.env.production
+.env.development
+
+
 # Logs
 logs
 *.log

@@ -2,11 +2,37 @@ import psycopg2
 import pandas as pd
 import os
 import csv
+import sys 
 import re
 from pathlib import Path
 import json
 import argparse
 from openpyxl import load_workbook
+from datetime import datetime
+from dotenv import load_dotenv #ajout
+
+#pour que sur windows ou mac les chemins fichiers soient les mêmes
+def normaliser_chemin(chemin):
+    """Convertit un chemin Windows en chemin valide pour l'OS courant"""
+    if not chemin:
+        return chemin
+    
+    #remplacer les \ par des /
+    chemin = chemin.replace('\\', '/')
+    
+    #enlever le './' ou '.\\' au début si présent
+    if chemin.startswith('./') or chemin.startswith('.\\'):
+        chemin = chemin[2:]
+    elif chemin.startswith('.'):
+        chemin = chemin[1:]
+    
+    #sur Mac/Linux, depuis Base_de_donnees, il faut remonter d'un dossier
+    if sys.platform != "win32":
+        #si le chemin ne commence pas déjà par ../
+        if not chemin.startswith('/') and not chemin.startswith('../'):
+            chemin = './' + chemin
+    
+    return chemin
 
 
 def expand_item(item):
@@ -80,26 +106,41 @@ def verification_hobo(metajson):
     with open(metajson, "r", encoding="utf-8") as f:
         data = json.load(f)
 
+        #normalisation du chemin
+        data["chemin_source"] = normaliser_chemin(data["chemin_source"])
+
+    dico = {
+        "numero_serie" : "",
+        "extension" : "",
+        "date_recueil" : "",
+        "reussite" : False,
+        "commentaire" : "",
+        "date_import" : "",
+        "type_source" : "",
+    }
+
     #pour obtenir le nom du fichier avec son extension sans avoir le chemin avant
-    nomFic = Path(data["fichier_mesure"]).name
+    nomFic = Path(data["chemin_source"]).name
     #print(nomFic)
     num_instru = data["num_instrument"]
     #print(num_instru)
     nom_instru = data["nom_outil"]
     #print(nom_instru)
 
+    #json.dump(dico, f, indent=4, ensure_ascii=False)
+
     cur.execute("SELECT * FROM structure_fichier sf JOIN instrument_mesure im ON lower(im.nom_outil) = lower(sf.nom_instrument) WHERE lower(im.num_instrument) = lower(%s);", (num_instru,))
     rows = cur.fetchall()
     #print(rows)
     for row in rows :
         if re.search(row[5], nomFic):
-            print("bon nom de fichier")
+            #print("bon nom de fichier")
             #colonnes = pd.read_excel(data["fichier_mesure"], nrows=0).columns #avec pandas, mais charge tout le fichier, ce qui n'est pas utile et pas otpimal
-            wb = load_workbook(data["fichier_mesure"], read_only=True)
+            wb = load_workbook(data["chemin_source"], read_only=True)
             ws = wb[wb.sheetnames[0]] #accès au premier onglet du fichier
             colonnes = ws.max_column
             if row[3] == colonnes:
-                print("bon nombre de colonnes")
+                #print("bon nombre de colonnes")
                 entetes = next(ws.iter_rows(max_row=1, values_only=True))#lis la ligne des en-têtes (donne un tuple)
                 entetes = list(entetes)#on transforme le tuple en liste ?
 
@@ -112,10 +153,14 @@ def verification_hobo(metajson):
                 for i in range(colonnes):
                     if isinstance(lcols[i], str):
                         if lcols[i].lower().strip() != entetes[i].lower().strip():
-                            print("nom de colonne différent str")
-                            return False
-                        else:
-                            print("bon nom de colonne str")
+                            #print("nom de colonne différent str")
+                            dico["commentaire"] = "nom de la colonne n°" + i + "différent, nom attendu : " + lcols[i]
+                            #return dico
+                            with open("retour.json", "w", encoding="utf-8") as f:
+                                json.dump(dico, f, indent=4, ensure_ascii=False)
+                            print(os.path.join(os.getcwd(), "retour.json"))
+                        #else:
+                            #print("bon nom de colonne str")
                     elif isinstance(lcols[i], list):
                         memecol = False
                         for j in range(len(lcols[i])):
@@ -123,40 +168,87 @@ def verification_hobo(metajson):
                             #print(entetes[i].lower().strip())
                             if lcols[i][j].lower().strip() == entetes[i].lower().strip():
                                 memecol = True
-                                print("bon nom de colonne list")
+                                #print("bon nom de colonne list")
                         if memecol == False:
-                            print("nom de colonne différent list")
-                            return False
+                            #print("nom de colonne différent list")
+                            dico["commentaire"] = "nom de la colonne n°" + i + "différent, noms attendus : " + lcols[i]
+                            with open("retour.json", "w", encoding="utf-8") as f:
+                                json.dump(dico, f, indent=4, ensure_ascii=False)
+                            print(os.path.join(os.getcwd(), "retour.json"))
             else :
-                return False
+                dico["commentaire"] = "le fichier ne contient pas le bon nombre de colonnes, nombre attendu : " + row[3]
+                with open("retour.json", "w", encoding="utf-8") as f:
+                    json.dump(dico, f, indent=4, ensure_ascii=False)
+                print(os.path.join(os.getcwd(), "retour.json"))
         else:
-            return False
-    return True
+            dico["commentaire"] = "Le nom du fichier n'a pas le bon format, format attendu : " + row[5]
+            with open("retour.json", "w", encoding="utf-8") as f:
+                json.dump(dico, f, indent=4, ensure_ascii=False)
+            print(os.path.join(os.getcwd(), "retour.json"))
+
+    dico["reussite"] = True
+    dico["extension"] = rows[0][1]
+    dico["numero_serie"] = rows[0][11]
+    dico["date_import"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    pattern = r"([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}_[0-9]{2}_[0-9]{2}) (?=CET\.xlsx)"
+
+    match = re.search(pattern, data["chemin_source"])
+
+    if match:
+        raw_dt = match.group(1)
+    #print("Brut :", raw_dt)
+
+    # Conversion des underscores en deux-points
+    clean_dt = raw_dt.replace("_", ":")
+    #print("Format standard :", clean_dt)
+    dico["date_recueil"] = clean_dt
+    dico["type_source"] = "fichier_mesure"
+    with open("retour.json", "w", encoding="utf-8") as f:
+        json.dump(dico, f, indent=4, ensure_ascii=False)
+    print(os.path.join(os.getcwd(), "retour.json"))
 
 
 if __name__ == "__main__":
-
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--json")
-    args = parser.parse_args()
+    args = parser.parse_args()"""
+
+    if len(sys.argv) != 2:
+        dico = {}
+        dico["commentaire"] = "Usage : ./verification_hobo.py JSON/verification_Hobo.json"
+        dico["reussite"] = False
+        with open("retour.json", "w", encoding="utf-8") as f:
+            json.dump(dico, f, indent=4, ensure_ascii=False)
+        print(os.path.join(os.getcwd(), "retour.json"))
+
+    else :
+
+
+        load_dotenv()
+
 
     # Connexion à la base
-    conn = psycopg2.connect(
-        host="localhost",
-        database="eco_forum",
-        user="postgres",
-        password="123456",
-        port=5432
-    )
+    #conn = psycopg2.connect(
+        #host="localhost",
+        #database="eco_forum",
+        #user="postgres",
+        #password="123456",
+        #port=5432
+    #)
+        conn = psycopg2.connect(
+            host=os.getenv("DB_HOST", "localhost"),
+            database=os.getenv("DB_NAME", "eco_forum"),
+            user=os.getenv("DB_USER", "postgres"),
+            password=os.getenv("DB_PASSWORD", ""),
+            port=os.getenv("DB_PORT", 5432)
+        )
 
-    #Création du curseur qui nous permettra de faire les requêtes
-    cur = conn.cursor()
+        #Création du curseur qui nous permettra de faire les requêtes
+        cur = conn.cursor()
 
-    with open(args.json, "r", encoding="utf-8") as f:
-        fichierjson = json.load(f)
+        verification_hobo(args.json)
 
-    print(verification_hobo(args.json))
-
-    # Fermeture curseur et connexion à la base
-    cur.close()
-    conn.close()
+        # Fermeture curseur et connexion à la base
+        cur.close()
+        conn.close()

@@ -5,6 +5,8 @@ import csv
 import re
 from pathlib import Path
 import argparse
+from dotenv import load_dotenv #ajout
+
 
 def format_date(date):
     if date == None :
@@ -163,8 +165,10 @@ def integration_fichier_metadonnees(ficPers, ficInstr, ficLoc, ficProj):
         #print("insertion de localisation réussie")
 
         #on récupère tous les capteurs qui sont liés à l'instrument de mesure cité dans la ligne
-        cur.execute("SELECT id_capteur FROM capteur JOIN instrument_mesure im ON im.id_instrument = capteur.id_instrument WHERE lower(num_instrument) IS NOT DISTINCT FROM lower(%s);", (row[0],))
+        print(row[0])
+        cur.execute("SELECT id_capteur FROM capteur JOIN instrument_mesure im ON im.id_instrument = capteur.id_instrument WHERE lower(im.num_instrument) IS NOT DISTINCT FROM lower(%s);", (row[0],))
         capteurs = cur.fetchall()
+        print(capteurs)
         #pour chaque capteur associé à un instrument, on associe la bonne localisation. (dans notre .xlsx, la localisation est associée à un instrument et pas un capteur alors que dans notre modèle EA c'est l'inverse) 
         for c in capteurs:
             date_deb = row[1].strftime("%Y-%m-%d") if hasattr(row[1], "strftime") else row[1]
@@ -225,28 +229,38 @@ if __name__ == "__main__" :
     parser.add_argument("--ficProj", default="videProj.xlsx")
     args = parser.parse_args()
 
+load_dotenv()
+
 
 # Connexion à la base
-    conn = psycopg2.connect(
-        host="localhost",
-        database="eco_forum",
-        user="postgres",
-        password="123456",
-        port=5432
-    )
+    #conn = psycopg2.connect(
+        #host="localhost",
+        #database="eco_forum",
+        #user="postgres",
+        #password="123456",
+        #port=5432
+    #)
 
-    #Création du curseur qui nous permettra de faire les requêtes
-    cur = conn.cursor()
+conn = psycopg2.connect(
+    host=os.getenv("DB_HOST"),
+    database=os.getenv("DB_NAME"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    port=os.getenv("DB_PORT")
+)
 
-    #Appel à la fonction qui va ajouter les données stockées dans les fichiers de métadonnées en .xlsx
-    integration_fichier_metadonnees(args.ficPers, args.ficInstr, args.ficLoc, args.ficProj)
-    """
-    python3 integration_metadonnees.py --ficPers Metadonnees_personnes.xlsx --ficInstr Metadonnees_instruments_capteurs.xlsx --ficLoc Metadonnees_localisations.xlsx --ficProj Metadonnees_projets.xlsx
-    """
+ #Création du curseur qui nous permettra de faire les requêtes
+cur = conn.cursor()
 
-    #Pour faire passer les modifications à la base de données
-    conn.commit()
+#Appel à la fonction qui va ajouter les données stockées dans les fichiers de métadonnées en .xlsx
+integration_fichier_metadonnees(args.ficPers, args.ficInstr, args.ficLoc, args.ficProj)
+"""
+python3 integration_metadonnees.py --ficPers Metadonnees_personnes.xlsx --ficInstr Metadonnees_instruments_capteurs.xlsx --ficLoc Metadonnees_localisations.xlsx --ficProj Metadonnees_projets.xlsx
+"""
 
-    #Fermeture du curseur et de la connexion
-    cur.close()
-    conn.close()
+#Pour faire passer les modifications à la base de données
+conn.commit()
+
+#Fermeture du curseur et de la connexion
+cur.close()
+conn.close()

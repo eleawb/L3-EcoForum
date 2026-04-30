@@ -1,3 +1,5 @@
+require('dotenv').config({path: '../Base_de_donnees/.env'})
+
 const express = require('express')
 const cors = require('cors')
 const { Client } = require('pg')
@@ -13,7 +15,7 @@ const port = 3000
 app.use(cors())
 app.use(express.json())
 
-/* bdd fictive francisco*/
+/* bdd fictive francisco
 const client = new Client({
     host: "localhost",
     user: "postgres",
@@ -22,6 +24,7 @@ const client = new Client({
     database: "postgres"    
 
 });
+*/
 
 
 //bdd fictive elea
@@ -37,7 +40,18 @@ const client = new Client({
 
 })
 */
+//test serveur pour tout le monde
+const client = new Client({
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT,
+  }) //tout le monde a son fichier .env avec son user+mdp au lieu de chacun envoyer sur sa bdd
+
 client.connect()
+    .then(() => console.log('Connecté à PostgreSQL'))
+    .catch(err => console.error('Erreur de connexion:', err))
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////R O U T E S/////////////////////////////////////////////////////////
@@ -133,6 +147,7 @@ app.post('/api/recherche', async (req, res) => {
                 i.nom_outil,
                 sf.nb_colonnes,
                 sf.nom_colonnes,
+                sf.colonnes_a_traiter,
                 sf.nom_instrument as structure_nom
             FROM instrument_mesure i
             JOIN structure_fichier sf ON sf.id_structure = i.id_structure
@@ -146,6 +161,7 @@ app.post('/api/recherche', async (req, res) => {
                 m.id_mesure,
                 m.description_mesure,
                 i.id_instrument,
+                m.valeur_mesure,
                 i.nom_outil as instrument,
                 i.modele,
                 i.num_instrument,
@@ -153,10 +169,12 @@ app.post('/api/recherche', async (req, res) => {
                 m.date_heure
             FROM mesure m
             JOIN serie_temporelle st ON st.id_st = m.id_st
-            JOIN capteur_generique cg ON cg.id_capteur_generique = st.id_capteur_gen
-            JOIN capteur c ON c.id_capteur = cg.id_capteur_generique
+            JOIN capteur_localise cl ON cl.id_capteur_gen = st.id_capteur_gen            
+            JOIN capteur c ON c.id_capteur = cl.id_capteur_gen
+            JOIN capteur_generique cg ON cg.id_capteur_generique = c.id_capteur
             JOIN instrument_mesure i ON i.id_instrument = c.id_instrument
             WHERE i.id_instrument = ANY($1::int[])
+
         `
         
         let params = [idsNumbers]
@@ -253,16 +271,36 @@ app.post('/api/recherche', async (req, res) => {
         for (const struct of structures.rows) {
             let nomsColonnes = []
             if (struct.nom_colonnes) {
-                nomsColonnes = struct.nom_colonnes.split(';').map(col => col.trim()) //elles sont récupérées ss format col1;col2;col3 donc on split
-                // nettoyage des noms (|| à enlever)
-                nomsColonnes = nomsColonnes.map(col => {
-                    if (col.includes('||')) {
-                        return col.split('||')[0].trim() //on récupère le premier nom
-                    }
-                    return col
+                const toutesLesColonnes = struct.nom_colonnes.split(';').map(col => col.trim())
+                const colonnesATraiter = struct.colonnes_a_traiter ? struct.colonnes_a_traiter.split(';').map(c => c.trim()) : []
+                
+                // DEBUG
+                console.log("🔍 DEBUG - struct:", {
+                    nom_instrument: struct.nom_instrument,
+                    toutesLesColonnes: toutesLesColonnes,
+                    colonnesATraiter: colonnesATraiter
                 })
-            } else { //si pas d'entêtes, on met des noms par défaut pour pouvoir les cocher ou décocher
-                 for (let i = 1; i <= struct.nb_colonnes; i++) {
+                
+                for (let i = 0; i < toutesLesColonnes.length; i++) {
+                    let colName = toutesLesColonnes[i]
+                    
+                    // Nettoyer les || : ne garder que la première partie
+                    if (colName.includes('||')) {
+                        colName = colName.split('||')[0].trim()
+                    }
+                    
+                    const estATraiter = colonnesATraiter[i] && colonnesATraiter[i].trim() === '1'
+                    const estDateOuHeure = colName.toLowerCase().includes('date') || colName.toLowerCase().includes('heure')
+                    
+                    if (estATraiter) {
+                        nomsColonnes.push(colName)
+                    }
+                    if (estDateOuHeure) {
+                        nomsColonnes.push(colName)
+                    }
+                }
+            } else {
+                for (let i = 1; i <= struct.nb_colonnes; i++) {
                     nomsColonnes.push(`colonne_${i}`)
                 }
             }
@@ -312,16 +350,20 @@ app.post('/api/recherche', async (req, res) => {
        const entetesGlobales = Array.from(uniqueColonnes.keys())
        
        // construction des résultats
-       let tousLesResultats = []
-       
-       for (const [id, instrument] of instrumentsMap) {
-           if (instrument.mesures.length === 0) continue
-           
-           for (const row of instrument.mesures) {
-               const nouvelleLigne = {}
-               
-               nouvelleLigne["Instrument"] = row.instrument //colonnes de base pour rappel de l'instrument choisi
-               nouvelleLigne["Capteur"] = row.capteur
+       const idsMesureVus = new Set() //Set pr éviter les doublons
+        let tousLesResultats = []
+
+        for (const [id, instrument] of instrumentsMap) {
+            if (instrument.mesures.length === 0) continue
+            
+            for (const row of instrument.mesures) {
+                // Ignorer les doublons d'id_mesure
+                if (idsMesureVus.has(row.id_mesure)) continue
+                idsMesureVus.add(row.id_mesure)
+                
+                const nouvelleLigne = {}
+                nouvelleLigne["Instrument"] = row.instrument
+                nouvelleLigne["Capteur"] = row.capteur
 
                /* formater la date et l'heure
                if (row.date_heure) {
@@ -332,29 +374,37 @@ app.post('/api/recherche', async (req, res) => {
                 nouvelleLigne["Date"] = '-' //sinon vide
                 nouvelleLigne["Heure"] = '-'
             }*/
+           
                // remplissage des colonnes avec les vrais noms
-               for (let i = 0; i < instrument.nomsColonnes.length; i++) {
-                   const colName = instrument.nomsColonnes[i]
-                   if (row.description_mesure) {
-                       const valeurs = row.description_mesure.split(';')
-                       nouvelleLigne[colName] = valeurs[i] || '-' //si pas de valeurs, -
-                   } else {
-                       nouvelleLigne[colName] = '-'
-                   }
-               }
-               
-               // pour les colonnes qui existent dans d'autres instruments mais pas dans celui-ci
-               for (const entete of entetesGlobales) {
-                   if (nouvelleLigne[entete] === undefined && entete !== 'Instrument' && entete !== 'Capteur' && entete !== 'Date' && entete !== 'Heure') {
-                       nouvelleLigne[entete] = '-'
-                   }
-               }
+                for (let i = 0; i < instrument.nomsColonnes.length; i++) {
+                    const colName = instrument.nomsColonnes[i]
+                    
+                    // Si c'est la colonne de donnée (la seule qui n'est pas Instrument, Capteur, Date)
+                    if (colName !== "Instrument" && colName !== "Capteur" && 
+                        !colName.toLowerCase().includes('date') && !colName.toLowerCase().includes('heure')) {
+                        // Valeur mesurée
+                        if (row.valeur_mesure !== null && row.valeur_mesure !== undefined) {
+                            nouvelleLigne[colName] = row.valeur_mesure
+                        } else {
+                            nouvelleLigne[colName] = '-'
+                        }
+                    }
+                    // Si c'est la colonne date/heure
+                    else if (colName.toLowerCase().includes('date') || colName.toLowerCase().includes('heure')) {
+                        nouvelleLigne[colName] = row.date_heure 
+                            ? new Date(row.date_heure).toLocaleString('fr-FR')
+                            : '-'
+                    }
+                    else {
+                        nouvelleLigne[colName] = '-'
+                    }
+}
                
                tousLesResultats.push(nouvelleLigne)
            }
        }
        
-       const previewResultats = tousLesResultats.slice(0, 40)
+       const previewResultats = tousLesResultats.slice(0, 20)
        
        //envoi des résultats 
        res.json({
@@ -368,10 +418,11 @@ app.post('/api/recherche', async (req, res) => {
        res.status(500).json({ error: err.message })
    }
 })
+
 //Route pour la creation de nouveau responsable fichiers
 //Envoi des information du form pour la creation d-un nouveau responable_fichier
 app.post('/api/responsable_fichier', async (req, res) => {
-  const { nom, prenom, email, fonction } = req.body;
+  const { nom, prenom, email, fonction } = req.body
   
   try {
     // Insertion de la nouvelle personne cree
@@ -380,47 +431,48 @@ app.post('/api/responsable_fichier', async (req, res) => {
        VALUES ($1, $2, $3, $4)
        RETURNING id_personne`,
       [nom, prenom, email, fonction]
-    );
-    const id_personne = result.rows[0].id_personne;
+    )
+    const id_personne = result.rows[0].id_personne
     // Insertion de la personne cree a la table de responsable_fichier
     await client.query(
       `INSERT INTO responsable_fichier (id_responsable)
        VALUES ($1)`,
       [id_personne]
-    );
+    )
     res.status(201).json({ 
       message: "Créé avec succès", 
       id_personne, 
       email 
-    });
+    })
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message })
   }
 })
 ////////////Stockage du fichier televerse
+
 // Configure storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    const uploadDir = path.join(__dirname, 'uploads');
+    const uploadDir = path.join(__dirname, 'uploads')
     //Cree un dossier sil nexiste pas
     if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+      fs.mkdirSync(uploadDir, { recursive: true })
     }
-    cb(null, uploadDir);
+    cb(null, uploadDir)
   },
   filename: function (req, file, cb) {
    
-    cb(null, file.originalname);
+    cb(null, file.originalname)
   }
-});
+})
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage: storage })
 
 //Stockage Fichier
 app.post('/api/upload', upload.single('file'), (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
+      return res.status(400).json({ error: 'No file uploaded' })
     }
 
     //Recuperer l information du fichier
@@ -434,9 +486,10 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
       }
     });
   } catch (error) {
-    res.status(500).json({ error: 'Erreure Sauvegarde' });
+    res.status(500).json({ error: 'Erreure Sauvegarde' })
   }
 });
+
 /*
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 Python-Shell VERIFICATION
@@ -540,3 +593,4 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 app.listen(port, () => {
     console.log(`Serveur démarré sur http://localhost:${port}`)
 })
+

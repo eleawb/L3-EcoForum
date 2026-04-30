@@ -1,0 +1,19 @@
+{
+    "script" : "integration",
+    "est_responsable_fichier" : false,
+    "mail_responsable" : "oriane.roux@etu.umontpellier.fr",
+    "nom" : "Roux",
+    "prenom" : "Oriane",
+    "fonction" : "Developpeur",
+    "encadre_par" : "marine.zwicke@umontpellier.fr",
+   
+    "chemin_source" : ".\\TMS4\\data_95224601_2024_11_19_0.csv",
+    "type_source" : "fichier_mesure",
+    "nom_outil" : "TMS4",
+    "num_instrument" : "TMS4_n°0",
+    "num_serie" : "95224601",
+    "extension" : "csv",
+    "date_recueil" : "2024-11-19 00:00:00",
+    "date_import" : "2026-04-25 11:07:52",
+    "commentaire" : "C'est bien de tester son code pour TMS4 :)"
+}

@@ -56,7 +56,7 @@ function Recherche() {
     const [datesPrecisesAjoutees, setDatesPrecisesAjoutees] = useState<Array<{id: string, type: string, valeur: string, plagesHoraires?: Array<{debut: string, fin: string}>}>>([]) //+plages horaire incluses
     const [heuresPrecisesPlages, setHeuresPrecisesPlages] = useState<Array<{id: string, debut: string, fin: string}>>([])
     const [jourDejaAjoute, setJourDejaAjoute] = useState(false) //on ne peut cliquer qu'une fois sur "jour(s)" car pas une plage journalière
-   
+    const [heurePreciseDejaAjoutee, setHeurePreciseDejaAjoutee] = useState(false)
 
     //si choix périodes temporelles
     const [periodesTemp, setPeriodesTemp] = useState(false) 
@@ -66,24 +66,13 @@ function Recherche() {
     const [heureDejaAjoutee, setHeureDejaAjoutee] = useState(false)
     const [moisDejaAjoute, setMoisDejaAjoute] = useState(false)
     const [anneeDejaAjoutee, setAnneeDejaAjoutee] = useState(false)
-
+const [joursDejaAjoutes, setJoursDejaAjoutes] = useState(false)
 
       // années sélectionnées
   const [anneesSelectionnees, setAnneesSelectionnees] = useState<string[]>([])
   // liste des années disponibles 
   const [anneesDisponibles, setAnneesDisponibles] = useState<string[]>([])
 
-      
-    const [choixDateD, setChoixDate] = useState('')
-    const [jourdeb, setJourDeb] = useState('')
-    const [jourfin, setJourFin] = useState('')
-    const [heuredeb, setHeureDeb] = useState('')
-    const [heurefin, setHeureFin] = useState('')
-   
-    const [moisdeb, setMoisDeb] = useState('')
-    const [moisfin, setMoisFin] = useState('')
-    const [anneedeb, setAnneeDeb] = useState('')
-    const [anneefin, setAnneeFin] = useState('')
 
     useEffect(() => {
         const fetchData = async () => {
@@ -502,7 +491,7 @@ const EnvoiDatesPrecises = () => {
 //CAS PÉRIODE
 // Fonction pour ajouter une période
 const ajouterPeriode = (type: string) => {
-    if (type === 'Jour(s)' && jourDejaAjoute) {
+    if (type === 'Jour(s)' && joursDejaAjoutes) {
         return // ne rien faire si le jour est déjà ajouté
     }
     if (type === 'Mois' && moisDejaAjoute){
@@ -523,7 +512,7 @@ const ajouterPeriode = (type: string) => {
     setPeriodesAjoutees([...periodesAjoutees, nouvellePeriode])
     
     if (type === 'Jour(s)') {
-        setJourDejaAjoute(true)
+        setJoursDejaAjoutes(true)
     }
     if (type === 'Heure(s)'){
         setHeureDejaAjoutee(true)
@@ -542,7 +531,7 @@ const supprimerPeriode = (id: string) => {
     setPeriodesAjoutees(periodesAjoutees.filter(periode => periode.id !== id))
 
     if (PeriodesASupprimer?.type === 'Jour(s)') {
-        setJourDejaAjoute(false)
+        setJoursDejaAjoutes(false)
     }
     if (PeriodesASupprimer?.type === 'Heure(s)') {
         setAnneeDejaAjoutee(false)
@@ -876,6 +865,10 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
         if (type === 'Jour(s)' && jourDejaAjoute) {
             return //ne rien faire si le jour est déjà ajouté
         }
+
+        if (type === 'Heure(s)' && heurePreciseDejaAjoutee) {
+            return //idem pour l'heure
+        }
         
         const nouvelleDate = {
             id: `${Date.now()}-${Math.random()}`,
@@ -887,6 +880,9 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
         if (type === 'Jour(s)') {
             setJourDejaAjoute(true)
         }
+        if (type === 'Heure(s)') {
+            setHeurePreciseDejaAjoutee(true)
+        }
     }
 
     // Supprimer une date précise
@@ -895,6 +891,9 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
         setDatesPrecisesAjoutees(datesPrecisesAjoutees.filter(date => date.id !== id))
         if (dateASupprimer?.type === 'Jour(s)') {
             setJourDejaAjoute(false)
+        }
+        if (dateASupprimer?.type === 'Heure(s)') {
+            setHeurePreciseDejaAjoutee(false)
         }
     }
 
@@ -953,10 +952,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
         setDatesPrecisesAjoutees([])
         setHeuresPrecisesPlages([])
         setJourDejaAjoute(false)
-        setHeureDeb('')
-        setHeureFin('')
-        setJourDeb('')
-        setJourFin('')
+        setHeurePreciseDejaAjoutee(false)
     }
 
 
@@ -1175,10 +1171,10 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                         id="BoutonJourP"
                                         startIcon={<AddIcon />}
                                         onClick={() => ajouterPeriode('Jour(s)')}
-                                        disabled={jourDejaAjoute}
+                                        disabled={joursDejaAjoutes}
                                             sx={{
-                                                bgcolor: jourDejaAjoute ? '#CCCCCC' : '#0370B2',
-                                                '&:hover': { bgcolor: jourDejaAjoute ? '#CCCCCC' : '#00517C' },
+                                                bgcolor: joursDejaAjoutes ? '#CCCCCC' : '#0370B2',
+                                                '&:hover': { bgcolor: joursDejaAjoutes ? '#CCCCCC' : '#00517C' },
                                                 fontSize: '0.75rem',
                                                 py: 0.5
                                             }}
@@ -1307,12 +1303,12 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                             id="BoutonHeureD"
                                             startIcon={<AddIcon />}
                                             onClick={() => {
-                                                ajouterDatePrecise('Heure(s)') 
-                                                
+                                                ajouterDatePrecise('Heure(s)')  
                                             }}
+                                            disabled={heurePreciseDejaAjoutee}
                                             sx={{
-                                                bgcolor: '#0370B2',
-                                                '&:hover': { bgcolor: '#00517C' },
+                                                bgcolor: heurePreciseDejaAjoutee ? '#CCCCCC' : '#0370B2',
+                                                '&:hover': { bgcolor: heurePreciseDejaAjoutee ? '#CCCCCC' : '#00517C' },
                                                 fontSize: '0.75rem',
                                                 py: 0.5
                                             }}
@@ -1345,7 +1341,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                             {date.type === 'Heure(s)' && (
 
                                                                 <LocalizationProvider dateAdapter={AdapterDayjs}>
-                                                                    <Box>
+                                                                    <Box sx = {{width:'100%'}}>
                                                                     <Stack direction="row" spacing={2} alignItems="center">
                                                                         <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}></Typography>
                                                                             <DesktopTimePicker
@@ -1364,7 +1360,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                                                         updateDatePrecise(date.id, nouvelleValeur)
                                                                                     }
                                                                                 }}
-                                                                                
+                                                                                sx={{ flex: 1 }}
                                                                                 format="HH:mm"
                                                                                 ampm={false}  // pour utiliser le format 24h
                                                                             />
@@ -1385,7 +1381,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                                                         updateDatePrecise(date.id, nouvelleValeur)
                                                                                     }
                                                                                 }}
-                                                                                
+                                                                                sx={{ flex: 1 }}
                                                                                 format="HH:mm"
                                                                                 ampm={false}
                                                                             />
@@ -1472,6 +1468,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                                                 }
                                                                             }}
                                                                             slotProps={{ textField: { size: 'small', fullWidth: true } }} //affichage pas trop large
+                                                                            sx={{ width: '100%' }}
                                                                             format="DD/MM/YYYY"
                                                                             minDate= {dayjs('2020')} //test choix année commence à 2020 
                                                                             maxDate = {dayjs()} //bloque à date du jour
