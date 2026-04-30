@@ -23,11 +23,11 @@ voir s'il suffit de taper "npm run dependencies" et "devDependencies" pour insta
 TEST POUR SE CONNECTER A LA BDD ECOFORUMV4 (avec intégration données hobo)
 
 avant tout, créez vous un fichier .env dans /Base_de_donnees et ajoutez : 
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=EcoForumV4
 DB_USER=postgres
 DB_PASSWORD=mdp
-DB_HOST=localhost
-DB_NAME=EcoForumV4
-DB_PORT=5432
 
 et modifiez postgres avec votre nom d'utilisateur sur pgAdmin, et mdp votre mdp pgAdmin
 normalement .env est ajouté dans .gitignore pour ne pas que le fichier soit push dans le gitlab (sécurité)
