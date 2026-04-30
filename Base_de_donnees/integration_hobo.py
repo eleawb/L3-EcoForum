@@ -386,7 +386,7 @@ def integration_hobo(ficjson):
             print("copie réussie")
             """
             nom_fic = Path(data["chemin_source"]).stem
-            nouveau_nom_fic = Path(data["chemin_source"]).with_suffix("").as_posix() + data["date_import"].replace(":", "_") + Path(data["chemin_source"]).suffix
+            nouveau_nom_fic = Path(data["chemin_source"]).with_suffix("").as_posix() + "__" + data["date_import"].replace(":", "_") + Path(data["chemin_source"]).suffix
             
 
             #étape 5 : créer source de données + la lier au responsable fichier + la lier à la structure correspondante au numéro d'instrument
