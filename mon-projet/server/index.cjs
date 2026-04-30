@@ -23,9 +23,8 @@ const client = new Client({
     password: "post",
     database: "postgres"    
 
-});
+})
 */
-
 
 //bdd fictive elea
 /*const client = new Client({
@@ -62,7 +61,7 @@ client.connect()
 ///////PARTIE RECHERCHE DE DONNÉES/////////////////////////////////////////////////////////////////////
 
 
-// Route pour récupérer tous les instruments
+//route pour récupérer tous les instruments
 app.get('/api/instruments', async (req, res) => {
     try {
         const result = await client.query(`SELECT * FROM instrument_mesure ORDER BY id_instrument ASC`)
@@ -76,8 +75,8 @@ app.get('/api/instruments', async (req, res) => {
 //route pour récupérer toutes les catégories
 app.get('/api/categories', async (req, res) => {
     try {
-        const result = await  client.query(`SELECT * FROM public.categorie_variable ORDER BY id_categorie ASC `);
-        console.log("Nombre de catégories trouvées:", result.rows.length) //debug
+        const result = await  client.query(`SELECT * FROM public.categorie_variable ORDER BY id_categorie ASC `)
+        console.log("Nb de catégories trouvées:", result.rows.length) //debug
         res.json(result.rows)
     } catch (err) {
         res.status(500).json({ error: err.message })
@@ -88,7 +87,7 @@ app.get('/api/categories', async (req, res) => {
 app.post('/api/instruments/by-categories', async (req, res) => {
     const { categories } = req.body
     //debugs
-    console.log(`Nombre de catégories sélectionnées: ${categories.length}`)
+    console.log(`Nb de catégories sélectionnées: ${categories.length}`)
     console.log(`Recherche des instruments pour les catégories:`, categories)
     try {
         const result = await client.query(`
@@ -107,7 +106,7 @@ app.post('/api/instruments/by-categories', async (req, res) => {
             WHERE cv.nom = ANY($1) 
                OR cv.id_parent IN (SELECT id_categorie FROM categorie_variable WHERE nom = ANY($1))
             ORDER BY i.id_instrument ASC
-        `, [categories])
+        `, [categories]) //$1 = premier paramètre 
         //debug encore
         console.log(`${result.rows.length} instrument(s) trouvé(s) pour la catégorie `, categories)
         res.json(result.rows)
@@ -118,7 +117,7 @@ app.post('/api/instruments/by-categories', async (req, res) => {
 })
 
 
-// Route pour chercher les résultats
+//route pour chercher les résultats
 app.post('/api/recherche', async (req, res) => {
     const { instrumentIds, dateDebut, dateFin, heuresPrecisesPlages, periodes } = req.body
     //debugs
@@ -140,7 +139,6 @@ app.post('/api/recherche', async (req, res) => {
             FROM coefficient_correcteur cc
             JOIN capteur c ON c.id_capteur = cc.id_capteur
             JOIN capteur_generique cg ON cg.id_capteur_generique = c.id_capteur
-
         `
         const coeffsResult = await client.query(coeffsQuery)
         
@@ -198,9 +196,7 @@ app.post('/api/recherche', async (req, res) => {
             JOIN capteur_generique cg ON cg.id_capteur_generique = c.id_capteur
             JOIN instrument_mesure i ON i.id_instrument = c.id_instrument
             WHERE i.id_instrument = ANY($1::int[])
-
         `
-        
         let params = [idsNumbers]
         let conditions = []
         
@@ -430,6 +426,16 @@ app.post('/api/recherche', async (req, res) => {
                 instrument.mesures.push(row)
             }
         }
+
+
+       //aficher la colonne "Coefficient correcteur" que si au moins 1 mesure corrigée
+       const afficherColonneCoeff = mesuresFiltrees.some(row => 
+        row.valeur_mesure_corrigee !== undefined &&
+        row.valeur_mesure !== row.valeur_mesure_corrigee //vrai si qq mesures corrigées présentes (cas avec filtres)
+     ) || result.rows.some(row => 
+        row.valeur_mesure_corrigee !== undefined && 
+        row.valeur_mesure !== row.valeur_mesure_corrigee //vrai si qq mesures corrigées présentes (recherche générale sans filtres)
+    )
         
 
        //détermination de ttes les colonnes uniques à afficher (fusionner tous les noms de colonnes)
@@ -444,12 +450,16 @@ app.post('/api/recherche', async (req, res) => {
                }
            }
        }
-       //afficher après colonne mesures
-       uniqueColonnes.set('Coefficient correcteur', true) //si coeff correcteur
+
+       //afficher après colonne mesures que si minimum une valeur corrigée
+       if (afficherColonneCoeff) {
+        uniqueColonnes.set('Coefficient correcteur', true)
+    } //si coeff correcteur
 
        
        const entetesGlobales = Array.from(uniqueColonnes.keys())
        
+
        // construction des résultats
        const idsMesureVus = new Set() //Set pr éviter les doublons
         let tousLesResultats = []
@@ -493,15 +503,18 @@ app.post('/api/recherche', async (req, res) => {
                     else {
                         nouvelleLigne[colName] = '-'
                     }
+
                 }
 
-                //ajouter la colonne "Coefficient correcteur" avec le coeff appliqué après colonne de mesures
-                if (row.coefficient_applique !== 0 && row.coefficient_applique !== undefined) {
-                    nouvelleLigne["Coefficient correcteur"] = `${row.coefficient_applique}`  //affiche le coeff
-                } else {
-                    nouvelleLigne["Coefficient correcteur"] = "-"  //Non corrigé
+                //affichage coeffs correcteurs que si valeurs corrigées
+                if (afficherColonneCoeff) {
+                    if (row.coefficient_applique !== 0 && row.coefficient_applique !== undefined) {
+                        nouvelleLigne["Coefficient correcteur"] = `${row.coefficient_applique}`
+                    } else {
+                        nouvelleLigne["Coefficient correcteur"] = "-"
+                    }
                 }
-               
+                
                tousLesResultats.push(nouvelleLigne)
            }
        }
