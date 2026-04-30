@@ -116,7 +116,6 @@ app.post('/api/instruments/by-categories', async (req, res) => {
     }
 })
 
-
 //route pour chercher les résultats
 app.post('/api/recherche', async (req, res) => {
     const { instrumentIds, dateDebut, dateFin, heuresPrecisesPlages, periodes } = req.body
@@ -140,9 +139,22 @@ app.post('/api/recherche', async (req, res) => {
             JOIN capteur c ON c.id_capteur = cc.id_capteur
             JOIN capteur_generique cg ON cg.id_capteur_generique = c.id_capteur
         `
+
+        //on récupère les dates de maintenance
+        const maintenanceQuery = `
+            SELECT mc.date_debut,
+            mc.date_fin,
+            mc.description,
+            c.id_capteur,
+            c.id_instrument
+            FROM maintenance_capteur mc
+            JOIN capteur c ON c.id_capteur = mc.id_capteur
+            WHERE mc.date_fin IS NOT NULL
+        `
         const coeffsResult = await client.query(coeffsQuery)
-        
-        //les organiser par capteur + par date
+        const maintenanceResult = await client.query(maintenanceQuery)
+
+        //organiser les coeffs par capteur + par date
         const coefficientsMap = new Map() // clé: "id_instrument|description_capteur"
         for (const coeff of coeffsResult.rows) {
             const key = `${coeff.id_instrument}|${coeff.id_capteur}`
@@ -159,6 +171,33 @@ app.post('/api/recherche', async (req, res) => {
         //les trier par date pour chaque capteur
         for (const [key, coeffs] of coefficientsMap) {
             coeffs.sort((a, b) => a.date_calibration - b.date_calibration)
+        }
+
+        //organiser les maintenances par capteur
+        const maintenancesMap = new Map() // clé: "id_instrument|id_capteur"
+        for (const maint of maintenanceResult.rows) {
+            const key = `${maint.id_instrument}|${maint.id_capteur}`
+            if (!maintenancesMap.has(key)) {
+                maintenancesMap.set(key, [])
+            }
+            maintenancesMap.get(key).push({
+                date_debut: new Date(maint.date_debut),
+                date_fin: new Date(maint.date_fin),
+                description: maint.description
+            })
+        }
+        
+        //fonction pr vérifier si une mesure est faite sous période de maintenance
+        function estEnMaintenance(capteurKey, dateMesure) {
+            const maintenances = maintenancesMap.get(capteurKey) //recup la liste de maintenance pour un capteur specifiqiue
+            if (!maintenances || maintenances.length === 0) return false //si aucune maintenance pr le capteur, false
+            
+            const dateMesureObj = new Date(dateMesure) //conversion de la date de mesure
+            
+            //verification si la mesure tombe dans au moins une periode maintenance
+            return maintenances.some(maint => { //vrai si qq mesures prises sous maintenance trouvées
+                return dateMesureObj >= maint.date_debut && dateMesureObj <= maint.date_fin //dateMesure comprise entre date_debut et date_fin
+            })
         }
 
         //ensuite on récupère les structures de chaque instrument pour avoir nb_colonnes pour l'affichage
@@ -276,6 +315,9 @@ app.post('/api/recherche', async (req, res) => {
         for (const row of result.rows) {
             const capteurKey = `${row.id_instrument}|${row.id_capteur}`
             const coeff = trouverCoefficient(capteurKey, row.date_heure)
+
+            //verifier si la mesure est en periode de maintenance
+            row.est_en_maintenance = estEnMaintenance(capteurKey, row.date_heure)
             
             if (coeff !== 0 && row.valeur_mesure !== null) {
                 //correction : valeur_corrigee = valeur_mesure + coefficient
@@ -436,7 +478,11 @@ app.post('/api/recherche', async (req, res) => {
         row.valeur_mesure_corrigee !== undefined && 
         row.valeur_mesure !== row.valeur_mesure_corrigee //vrai si qq mesures corrigées présentes (recherche générale sans filtres)
     )
-        
+    
+        //afficher la colonne "maintenance" que données prises sous maintenance > 0  
+        const afficherColonneMaintenance = mesuresFiltrees.some(row=>
+            row.est_en_maintenance === true) || result.rows.some(row => row.est_en_maintenance === true)
+            //true si qq mesures prises sous maintenance (cas avec ou sans filtres dates)
 
        //détermination de ttes les colonnes uniques à afficher (fusionner tous les noms de colonnes)
        const uniqueColonnes = new Map() // Map pour garder l'ordre d'affichage si on recoche une colonne 
@@ -453,8 +499,13 @@ app.post('/api/recherche', async (req, res) => {
 
        //afficher après colonne mesures que si minimum une valeur corrigée
        if (afficherColonneCoeff) {
-        uniqueColonnes.set('Coefficient correcteur', true)
-    } //si coeff correcteur
+            uniqueColonnes.set('Coefficient correcteur', true)
+        } //si coeff correcteur
+
+            //afficher colonne maintenance que si minimum une mesure prise sous maintenance 
+        if (afficherColonneMaintenance) {
+            uniqueColonnes.set('Mesure prise sous maintenance ?', true)
+        } 
 
        
        const entetesGlobales = Array.from(uniqueColonnes.keys())
@@ -506,13 +557,19 @@ app.post('/api/recherche', async (req, res) => {
 
                 }
 
-                //affichage coeffs correcteurs que si valeurs corrigées
+                //affichage colonne coeffs correcteurs que si présence de valeurs corrigées
                 if (afficherColonneCoeff) {
                     if (row.coefficient_applique !== 0 && row.coefficient_applique !== undefined) {
                         nouvelleLigne["Coefficient correcteur"] = `${row.coefficient_applique}`
                     } else {
                         nouvelleLigne["Coefficient correcteur"] = "-"
                     }
+                }
+
+
+                //afficher colonne maintenance 
+                if (afficherColonneMaintenance){
+                    nouvelleLigne["Mesure prise sous maintenance ?"] = row.est_en_maintenance ? "Oui" : "Non" //oui si sous maintenance, non sinon
                 }
                 
                tousLesResultats.push(nouvelleLigne)
