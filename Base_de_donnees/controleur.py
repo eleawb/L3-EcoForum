@@ -55,8 +55,8 @@ def nonMeta(choixScript, instrument, metaJson):
     except subprocess.CalledProcessError as e:
         print(json.dumps({"reussite":False, "commentaire":f"La commande de {choixScript} des donnees a echoue avec le code d'erreur : {e.returncode}"}))
         #"Retour" de notre script si tout ne s'est pas bien passé
-        print(e.stderr)            #Si l'on veut voir le message d'erreur effectuer par le script défectueux
-        print(e.stdout)         #Si l'on veut voir les print effectuer par le script défectueux jusqu'au moment de l'erreur
+        #print(e.stderr)            #Si l'on veut voir le message d'erreur effectuer par le script défectueux
+        #print(e.stdout)            #Si l'on veut voir les print effectuer par le script défectueux jusqu'au moment de l'erreur
 
 
 if __name__ == "__main__":
