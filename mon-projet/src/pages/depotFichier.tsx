@@ -49,7 +49,7 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
   const [typeSource, setTypeSource] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const FirstFormComplete = selectedInstrument !== '' && numInstrument !== '';
+  const FirstFormComplete = selectedInstrument !== '' && numInstrument !== '' &&  typeSource !== '';
   const areAdditionalInputsComplete = utilisateur !== '';
 /*
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -91,10 +91,10 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
     setSelectedInstrument(selectedValue);
 
     //Detection du numeroInstrument
-    const instrument = instruments.find(i => i.nom_outil === selectedInstrument);
-      if (instrument) {
-        setNumInstrument(instrument.num_instrument?.toString() || '');   
-      }
+    const instrument = instruments.find(i => i.nom_outil === selectedValue);
+    if (instrument) {
+      setNumInstrument(instrument.num_instrument?.toString() || '');   
+  }
   };
 
   const FileUpload = () => {
@@ -138,6 +138,14 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
     setSelectedResponsable(selectedValue);
     setIsNewResponsable(false);//Remet le flag a false quand on prend un responsable autre que celui nouvellement cree
 };
+
+const AutofillDate = () => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      setDateImport(`${year}-${month}-${day}`);
+    };
 
 const handleCreateResponsable = async () => {
   //Verifie si les entrees sont remplies
@@ -245,10 +253,24 @@ return(
                 placeholder="Entrez le numero de l-instrument"
               />
 
+              <FormControl fullWidth required>
+                  <InputLabel>Type source</InputLabel>
+                  <Select
+                    value={typeSource}
+                    onChange={(e) => setTypeSource(e.target.value)}
+                    label="Type source"
+                  >
+                  <MenuItem value="fichier_mesure">fichier_mesure</MenuItem>
+                  <MenuItem value="dossier_audio">dossier_audio</MenuItem>
+                  <MenuItem value="dossier_image">dossier_image</MenuItem>
+                  </Select>
+              </FormControl>
+
               <Button
                   type="button"
                   variant="contained"
                   onClick={FileUpload}
+                  disabled = {!FirstFormComplete}
                   sx={{
                     bgcolor: '#EC9706',
                     '&:hover': { bgcolor: '#C78023' },
@@ -376,6 +398,14 @@ return(
                         onChange={(e) => setDateImport(e.target.value)}
                         InputLabelProps={{ shrink: true }}
                       />
+                      <Button
+                        type="button"
+                        variant="outlined"
+                        onClick={AutofillDate}
+                        sx={{ minWidth: '100px', height: '56px' }}
+                        >
+                        Aujourd'hui
+                      </Button>
                     </Stack>
 
                     <Stack direction="row" spacing={2} alignItems="center">
@@ -390,18 +420,6 @@ return(
                       />
                     </Stack>
                   
-                    <FormControl fullWidth required>
-                      <InputLabel>Type source</InputLabel>
-                      <Select
-                        value={typeSource}
-                        onChange={(e) => setTypeSource(e.target.value)}
-                        label="Type source"
-                      >
-                        <MenuItem value="fichier_mesure">fichier_mesure</MenuItem>
-                        <MenuItem value="dossier_audio">dossier_audio</MenuItem>
-                        <MenuItem value="dossier_image">dossier_image</MenuItem>
-                      </Select>
-                    </FormControl>
                   </>
                 )}
               
