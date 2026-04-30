@@ -321,6 +321,7 @@ CREATE TABLE instrument_projet (
 CREATE TABLE capteur (
     id_capteur INT,
     date_activation DATE,
+    num_colonne INT NOT NULL,
     id_instrument INT NOT NULL,
     CONSTRAINT PK_capteur PRIMARY KEY (id_capteur),
     CONSTRAINT FK_capteur_capteur_generique
