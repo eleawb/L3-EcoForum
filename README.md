@@ -20,16 +20,16 @@ Dans # package.json, explications des dépendences
 voir s'il suffit de taper "npm run dependencies" et "devDependencies" pour installer les dépendences
 
 
-TEST POUR SE CONNECTER A LA BDD ELEA AVEC DONNÉES SEMI FICTIVES (avant intégration de toutes les vraies données)
-PUIS PLUS TARD POUR LA BDD TOUT COURT
+TEST POUR SE CONNECTER A LA BDD ECOFORUMV4 (avec intégration données hobo)
 
-avant tout, créez vous un fichier .env à la racine du projet et ajoutez : 
+avant tout, créez vous un fichier .env dans /Base_de_donnees et ajoutez : 
 DB_USER=postgres
 DB_PASSWORD=mdp
 DB_HOST=localhost
-DB_NAME=EcoforumV3
+DB_NAME=EcoforumV4
+DB_PORT=5432
 
-et modifiez avec postgres votre nom d'utilisateur sur pgAdmin, et mdp votre mdp pgAdmin
+et modifiez postgres avec votre nom d'utilisateur sur pgAdmin, et mdp votre mdp pgAdmin
 normalement .env est ajouté dans .gitignore pour ne pas que le fichier soit push dans le gitlab (sécurité)
 
 ENSUITE :
