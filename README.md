@@ -23,21 +23,21 @@ voir s'il suffit de taper "npm run dependencies" et "devDependencies" pour insta
 TEST POUR SE CONNECTER A LA BDD ECOFORUMV4 (avec intégration données hobo)
 
 avant tout, créez vous un fichier .env dans /Base_de_donnees et ajoutez : 
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=EcoForumV4
 DB_USER=postgres
 DB_PASSWORD=mdp
-DB_HOST=localhost
-DB_NAME=EcoforumV4
-DB_PORT=5432
 
 et modifiez postgres avec votre nom d'utilisateur sur pgAdmin, et mdp votre mdp pgAdmin
 normalement .env est ajouté dans .gitignore pour ne pas que le fichier soit push dans le gitlab (sécurité)
 
 ENSUITE :
 
-- sur pgAdmin : créer une bdd vide EcoForumV4, clic droit sur la base, "Query Tool", Menu File, Open, choisir EcoForumV4.sql
-Cliquer sur le bouton Execute / Play (triangle noir)
-- ligne de cmd : psql -U postgres -d EcoForumV4 -f EcoForumV4.sql
+- soit sur pgAdmin : créer une bdd vide EcoForumV4, clic droit sur la base, "Query Tool", Menu File, Open, choisir EcoForumV4.sql, Execute / Play
+- soit ligne de cmd : psql -U postgres -d EcoForumV4 -f EcoForumV4.sql
 
+se mettre dans dossier racine : npm install (installe tous les imports et dépendances)
 se mettre dans /mon-projet
 pour lancer le client et le serveur en simultané : lancer "npm run dev:all"
 
