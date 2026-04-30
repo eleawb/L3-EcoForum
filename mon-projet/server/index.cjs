@@ -59,6 +59,9 @@ client.connect()
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+///////PARTIE RECHERCHE DE DONNÉES/////////////////////////////////////////////////////////////////////
+
+
 // Route pour récupérer tous les instruments
 app.get('/api/instruments', async (req, res) => {
     try {
@@ -68,24 +71,6 @@ app.get('/api/instruments', async (req, res) => {
         res.status(500).json({ error: err.message })
     } 
 })
-
-// Route pour récupérer tous les responsables_fichiers
-app.get('/api/responsables', async (req, res) => {
-    try {
-        const result = await client.query(`SELECT 
-                p.id_personne,
-                p.nom,
-                p.prenom,
-                p.adresse_mail
-            FROM responsable_fichier rf
-            JOIN personne p ON rf.id_responsable = p.id_personne
-            ORDER BY p.nom ASC`)
-        res.json(result.rows)
-    } catch (err) {
-        res.status(500).json({ error: err.message })
-    }
-})
-
 
 
 //route pour récupérer toutes les catégories
@@ -536,6 +521,28 @@ app.post('/api/recherche', async (req, res) => {
    }
 })
 
+///////PARTIE AJOUT DE DONNÉES//////////////////////////////////////////////////////
+
+// Route pour récupérer tous les responsables_fichiers
+app.get('/api/responsables', async (req, res) => {
+    try {
+        const result = await client.query(`SELECT 
+                p.id_personne,
+                p.nom,
+                p.prenom,
+                p.adresse_mail
+            FROM responsable_fichier rf
+            JOIN personne p ON rf.id_responsable = p.id_personne
+            ORDER BY p.nom ASC`)
+        res.json(result.rows)
+    } catch (err) {
+        res.status(500).json({ error: err.message })
+    }
+})
+
+
+
+
 //Route pour la creation de nouveau responsable fichiers
 //Envoi des information du form pour la creation d-un nouveau responable_fichier
 app.post('/api/responsable_fichier', async (req, res) => {
@@ -605,7 +612,7 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Erreure Sauvegarde' })
   }
-});
+})
 
 /*
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
