@@ -3,12 +3,12 @@ require('dotenv').config({path: '../Base_de_donnees/.env'})
 const express = require('express')
 const cors = require('cors')
 const { Client } = require('pg')
-//Importation de PythonShell pour traiter les appels de fonctions Verif et Inte
-const { PythonShell } = require('python-shell');
-//Import de FileSystem
-const fs = require('fs');
-const multer = require('multer');
-const path = require('path');
+//importation de PythonShell pour traiter les appels de fonctions Verif et Inte - partie francisco
+const { PythonShell } = require('python-shell')
+//import de FileSystem - partie francisco
+const fs = require('fs')
+const multer = require('multer')
+const path = require('path')
 const app = express()
 const port = 3000
 
@@ -50,7 +50,8 @@ const client = new Client({
   }) //tout le monde a son fichier .env avec son user+mdp au lieu de chacun envoyer sur sa bdd
 
 client.connect()
-    .then(() => console.log('Connecté à PostgreSQL'))
+    //debugs
+    .then(() => console.log('Connecté à PostgreSQL')) 
     .catch(err => console.error('Erreur de connexion:', err))
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -91,7 +92,7 @@ app.get('/api/responsables', async (req, res) => {
 app.get('/api/categories', async (req, res) => {
     try {
         const result = await  client.query(`SELECT * FROM public.categorie_variable ORDER BY id_categorie ASC `);
-        console.log("Nombre de catégories trouvées:", result.rows.length)
+        console.log("Nombre de catégories trouvées:", result.rows.length) //debug
         res.json(result.rows)
     } catch (err) {
         res.status(500).json({ error: err.message })
@@ -101,6 +102,7 @@ app.get('/api/categories', async (req, res) => {
 //route pour récupérer les instruments par catégories
 app.post('/api/instruments/by-categories', async (req, res) => {
     const { categories } = req.body
+    //debugs
     console.log(`Nombre de catégories sélectionnées: ${categories.length}`)
     console.log(`Recherche des instruments pour les catégories:`, categories)
     try {
@@ -120,8 +122,9 @@ app.post('/api/instruments/by-categories', async (req, res) => {
             WHERE cv.nom = ANY($1) 
                OR cv.id_parent IN (SELECT id_categorie FROM categorie_variable WHERE nom = ANY($1))
             ORDER BY i.id_instrument ASC
-        `, [categories]);
-        console.log(`${result.rows.length} instrument(s) trouvé(s) pour la catégorie `, categories);
+        `, [categories])
+        //debug encore
+        console.log(`${result.rows.length} instrument(s) trouvé(s) pour la catégorie `, categories)
         res.json(result.rows)
     } catch (err) {
         console.error('Erreur:', err.message)
@@ -133,6 +136,7 @@ app.post('/api/instruments/by-categories', async (req, res) => {
 // Route pour chercher les résultats
 app.post('/api/recherche', async (req, res) => {
     const { instrumentIds, dateDebut, dateFin, heuresPrecisesPlages, periodes } = req.body
+    //debugs
     console.log("Recherche pour ids instrument:", instrumentIds)
     console.log("date début : ", dateDebut, ", date fin : ", dateFin)
     console.log("plages horaires :", heuresPrecisesPlages)
@@ -140,7 +144,41 @@ app.post('/api/recherche', async (req, res) => {
     try {
         const idsNumbers = instrumentIds.map(id => parseInt(id, 10))
         
-        // on récupère les structures de chaque instrument pour avoir nb_colonnes pour l'affichage
+        //avant d'afficher, on récupére tous les coefficients correcteurs
+        const coeffsQuery = `
+            SELECT 
+                cc.valeur,
+                cc.date_calibration,
+                cg.description as description_capteur,
+                c.id_instrument,
+                c.id_capteur
+            FROM coefficient_correcteur cc
+            JOIN capteur c ON c.id_capteur = cc.id_capteur
+            JOIN capteur_generique cg ON cg.id_capteur_generique = c.id_capteur
+
+        `
+        const coeffsResult = await client.query(coeffsQuery)
+        
+        //les organiser par capteur + par date
+        const coefficientsMap = new Map() // clé: "id_instrument|description_capteur"
+        for (const coeff of coeffsResult.rows) {
+            const key = `${coeff.id_instrument}|${coeff.id_capteur}`
+            if (!coefficientsMap.has(key)) {
+                coefficientsMap.set(key, [])
+            }
+            coefficientsMap.get(key).push({
+                valeur: parseFloat(coeff.valeur), //convertit string en float
+                date_calibration: new Date(coeff.date_calibration),
+                description_capteur: coeff.description_capteur
+            })
+        }
+        
+        //les trier par date pour chaque capteur
+        for (const [key, coeffs] of coefficientsMap) {
+            coeffs.sort((a, b) => a.date_calibration - b.date_calibration)
+        }
+
+        //ensuite on récupère les structures de chaque instrument pour avoir nb_colonnes pour l'affichage
         const structureQuery = `
             SELECT DISTINCT
                 i.id_instrument,
@@ -155,7 +193,7 @@ app.post('/api/recherche', async (req, res) => {
         ` //$1 : 1er paramètre (instrumentsIds)
         const structures = await client.query(structureQuery, [idsNumbers])
         
-        // ensuite on récupère toutes les mesures + filtre de dates
+        //ensuite on récupère toutes les mesures + filtre de dates
         let query = `
             SELECT 
                 m.id_mesure,
@@ -166,6 +204,7 @@ app.post('/api/recherche', async (req, res) => {
                 i.modele,
                 i.num_instrument,
                 cg.description as capteur,
+                c.id_capteur,
                 m.date_heure
             FROM mesure m
             JOIN serie_temporelle st ON st.id_st = m.id_st
@@ -187,7 +226,7 @@ app.post('/api/recherche', async (req, res) => {
                 params.push(dateDebut)
                 console.log("recherche sur une date unique : ", dateDebut)
             } else { //sinon une période précise
-                query += ` AND m.date_heure BETWEEN $2 AND $3` //$2 = dateDebut, $3 = dateFin
+                query += ` AND m.date_heure >= $2 AND m.date_heure < ($3::date+interval '1 day')` //$2 = dateDebut, $3 = dateFin : on ajoute un jour pr que le jourFin soit inclus à n'importe quelle heure
                 params.push(dateDebut, dateFin)
                 console.log("recherche sur une période précise : ", dateDebut, " et ", dateFin)
             }
@@ -230,12 +269,51 @@ app.post('/api/recherche', async (req, res) => {
             query += ` AND ${conditions.join(' AND ')}`
         }
         
-        query += ` ORDER BY i.id_instrument, m.date_heure ASC LIMIT 100`
+        query += ` ORDER BY i.id_instrument, m.date_heure ASC`
         
         console.log("requete sql : ", query) 
         console.log("params : ", params)
         
         const result = await client.query(query, params)
+
+        //fonction pour trouver le coefficient applicable à une date
+        function trouverCoefficient(capteurKey, dateMesure) {
+            const coeffs = coefficientsMap.get(capteurKey)
+            if (!coeffs || coeffs.length === 0) return 0
+            
+            const dateMesureObj = new Date(dateMesure)
+            //parcours inverse pr trouver le plus récent applicable plus vite
+            for (let i = coeffs.length - 1; i >= 0; i--) {
+                if (coeffs[i].date_calibration <= dateMesureObj) {
+                    return coeffs[i].valeur
+                }
+            }
+            return 0
+        }
+        
+        //avant, appliquer la correction aux mesures
+        for (const row of result.rows) {
+            const capteurKey = `${row.id_instrument}|${row.id_capteur}`
+            const coeff = trouverCoefficient(capteurKey, row.date_heure)
+            
+            if (coeff !== 0 && row.valeur_mesure !== null) {
+                //correction : valeur_corrigee = valeur_mesure + coefficient
+                const valeurOriginale = parseFloat(row.valeur_mesure)
+                if (!isNaN(valeurOriginale) && coeff !==0) {
+                    row.valeur_mesure_corrigee = valeurOriginale + coeff
+                    row.coefficient_applique = coeff
+                    //remplir la date de calibration appliquée
+                    const coeffObj = coefficientsMap.get(capteurKey).find(c => c.valeur === coeff)
+                    row.date_calibration_appliquee = coeffObj ? coeffObj.date_calibration : null
+                } else {
+                    row.valeur_mesure_corrigee = row.valeur_mesure
+                    row.coefficient_applique = 0
+                }
+            } else {
+                row.valeur_mesure_corrigee = row.valeur_mesure
+                row.coefficient_applique = 0
+            }
+        }
 
         //filtre par heures (périodes ou dates précises)
         let heuresAFiltrer = [...(heuresPrecisesPlages || [])]
@@ -246,8 +324,24 @@ app.post('/api/recherche', async (req, res) => {
         }
 
         let mesuresFiltrees = result.rows
+
+        // Ajoute ceci juste avant le filtrage horaire, après avoir récupéré result.rows
+        console.log("=== APERÇU DES MESURES BRUTES ===")
+        const mesures26mars = result.rows.filter(row => {
+            const dateStr = new Date(row.date_heure).toISOString().split('T')[0]
+            return dateStr === '2024-03-26'
+        })
+        console.log(`Nombre de mesures du 26 mars dans result.rows: ${mesures26mars.length}`)
+        if (mesures26mars.length > 0) {
+            console.log("Premières mesures du 26 mars:", mesures26mars.slice(0, 5).map(r => ({
+                date: r.date_heure,
+                heure: new Date(r.date_heure).getHours(),
+                valeur: r.valeur_mesure
+            })))
+}
         
-        if (heuresAFiltrer.length > 0) { 
+        if (heuresAFiltrer.length > 0) {
+            console.log("dateDebut:", dateDebut, "dateFin:", dateFin) 
             mesuresFiltrees = result.rows.filter(row => {
                 if (!row.date_heure) return false
                 
@@ -255,18 +349,46 @@ app.post('/api/recherche', async (req, res) => {
                 const heure = dateHeure.getHours()
                 const minute = dateHeure.getMinutes()
                 const heureMinute = `${heure.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}` //convertit en char fomat "HH:mm" avec 2 chiffres HH et mm (si 9 > 09)
-                
-                // verif si l'heure correspond à au moins une des plages
+                const dateStr = `${dateHeure.getFullYear()}-${String(dateHeure.getMonth() + 1).padStart(2, '0')}-${String(dateHeure.getDate()).padStart(2, '0')}`
+
+                //verif si l'heure correspond à au moins une des plages
                 return heuresAFiltrer.some(plage => {
                     if (!plage.debut || !plage.fin) return false
-                    return heureMinute >= plage.debut && heureMinute <= plage.fin
-                })
+                    const debut = plage.debut
+                    const fin = plage.fin
+                    
+                    //cas où la plage chevauche minuit (20h -> 3h)
+                        if (debut > fin) {
+                            //recherche sur plusieurs jours seulement
+                            if (dateDebut === dateFin) return false
+
+                            //si c'est la date de début : on garde les heures >= debut
+                            if (dateStr === dateDebut) {
+                                const match = heureMinute >= debut
+                                console.log(`Date début: ${dateStr} === ${dateDebut}, heure ${heureMinute} >= ${debut} = ${match}`)
+                                return match
+                            }
+                            //si c'est la date de fin : on garde les heures <= fin
+                            else if (dateStr === dateFin) {
+                                const match = heureMinute <= fin
+                                console.log(`Date fin: ${dateStr} === ${dateFin}, heure ${heureMinute} <= ${fin} = ${match}`)
+                                return match
+                            } else {
+                                console.log(`Date intermédiaire: ${dateStr}, gardée`)
+                                return true //dates intermédiaires
+                            }
+                        
+                        } else {
+                            //plage normale
+                            return heureMinute >= debut && heureMinute <= fin
+                        }
+                    })
             })
             
-            console.log(`Filtrage par heure:  ${result.rows.length} > ${mesuresFiltrees.length} résultats`)
+            console.log(`Filtrage par heure:  ${result.rows.length} > ${mesuresFiltrees.length} résultats`) //debug comparaison avec resultat initial
         }
         
-        // s'il y a des entêtes, on récupère les noms
+        //s'il y a des entêtes, on récupère les noms
         const instrumentColonnes = new Map()
         for (const struct of structures.rows) {
             let nomsColonnes = []
@@ -274,17 +396,11 @@ app.post('/api/recherche', async (req, res) => {
                 const toutesLesColonnes = struct.nom_colonnes.split(';').map(col => col.trim())
                 const colonnesATraiter = struct.colonnes_a_traiter ? struct.colonnes_a_traiter.split(';').map(c => c.trim()) : []
                 
-                // DEBUG
-                console.log("🔍 DEBUG - struct:", {
-                    nom_instrument: struct.nom_instrument,
-                    toutesLesColonnes: toutesLesColonnes,
-                    colonnesATraiter: colonnesATraiter
-                })
                 
                 for (let i = 0; i < toutesLesColonnes.length; i++) {
                     let colName = toutesLesColonnes[i]
                     
-                    // Nettoyer les || : ne garder que la première partie
+                    //nettoyer les ||, on garde que la première partie
                     if (colName.includes('||')) {
                         colName = colName.split('||')[0].trim()
                     }
@@ -311,7 +427,7 @@ app.post('/api/recherche', async (req, res) => {
             })
         }
 
-        // on regroupe les résultats par instrument
+        //on regroupe les résultats par instrument
         const instrumentsMap = new Map()
         for (const [id, info] of instrumentColonnes) {
             instrumentsMap.set(id, {
@@ -331,14 +447,11 @@ app.post('/api/recherche', async (req, res) => {
         }
         
 
-       // détermination de ttes les colonnes uniques à afficher (fusionner tous les noms de colonnes)
+       //détermination de ttes les colonnes uniques à afficher (fusionner tous les noms de colonnes)
        const uniqueColonnes = new Map() // Map pour garder l'ordre d'affichage si on recoche une colonne 
        uniqueColonnes.set('Instrument', true)
        uniqueColonnes.set('Capteur', true)
-       //uniqueColonnes.set('Date', true)
-       //uniqueColonnes.set('Heure', true)
 
-       
        for (const [id, instrument] of instrumentsMap) {
            for (const colName of instrument.nomsColonnes) {
                if (!uniqueColonnes.has(colName)) {
@@ -346,6 +459,9 @@ app.post('/api/recherche', async (req, res) => {
                }
            }
        }
+       //afficher après colonne mesures
+       uniqueColonnes.set('Coefficient correcteur', true) //si coeff correcteur
+
        
        const entetesGlobales = Array.from(uniqueColonnes.keys())
        
@@ -357,39 +473,33 @@ app.post('/api/recherche', async (req, res) => {
             if (instrument.mesures.length === 0) continue
             
             for (const row of instrument.mesures) {
-                // Ignorer les doublons d'id_mesure
+                //ignorer les doublons d'id_mesure
                 if (idsMesureVus.has(row.id_mesure)) continue
                 idsMesureVus.add(row.id_mesure)
                 
                 const nouvelleLigne = {}
                 nouvelleLigne["Instrument"] = row.instrument
                 nouvelleLigne["Capteur"] = row.capteur
-
-               /* formater la date et l'heure
-               if (row.date_heure) {
-                const dateObj = new Date(row.date_heure)
-                nouvelleLigne["Date"] = dateObj.toLocaleDateString('fr-FR') //conversion en date française DD-MM-YYYY
-                nouvelleLigne["Heure"] = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) //conversion en char à 2 chiffres (9 > 09 )
-            } else {
-                nouvelleLigne["Date"] = '-' //sinon vide
-                nouvelleLigne["Heure"] = '-'
-            }*/
            
-               // remplissage des colonnes avec les vrais noms
+               //remplissage des colonnes avec les vrais noms
                 for (let i = 0; i < instrument.nomsColonnes.length; i++) {
                     const colName = instrument.nomsColonnes[i]
                     
-                    // Si c'est la colonne de donnée (la seule qui n'est pas Instrument, Capteur, Date)
+                    //si c'est la colonne de donnée (la seule qui n'est pas Instrument, Capteur, Date)
                     if (colName !== "Instrument" && colName !== "Capteur" && 
                         !colName.toLowerCase().includes('date') && !colName.toLowerCase().includes('heure')) {
-                        // Valeur mesurée
-                        if (row.valeur_mesure !== null && row.valeur_mesure !== undefined) {
+                        //valeur mesurée
+                        if (row.valeur_mesure_corrigee !== null && row.valeur_mesure_corrigee !== undefined) {
+                            nouvelleLigne[colName] = row.valeur_mesure_corrigee
+                            //ajouter une indication que la valeur est corrigée
+                            nouvelleLigne[`${colName}_corrige`] = true
+                        } else if (row.valeur_mesure !== null && row.valeur_mesure !== undefined) {
                             nouvelleLigne[colName] = row.valeur_mesure
                         } else {
                             nouvelleLigne[colName] = '-'
                         }
                     }
-                    // Si c'est la colonne date/heure
+                    //si c'est la colonne date/heure
                     else if (colName.toLowerCase().includes('date') || colName.toLowerCase().includes('heure')) {
                         nouvelleLigne[colName] = row.date_heure 
                             ? new Date(row.date_heure).toLocaleString('fr-FR')
@@ -398,7 +508,14 @@ app.post('/api/recherche', async (req, res) => {
                     else {
                         nouvelleLigne[colName] = '-'
                     }
-}
+                }
+
+                //ajouter la colonne "Coefficient correcteur" avec le coeff appliqué après colonne de mesures
+                if (row.coefficient_applique !== 0 && row.coefficient_applique !== undefined) {
+                    nouvelleLigne["Coefficient correcteur"] = `${row.coefficient_applique}`  //affiche le coeff
+                } else {
+                    nouvelleLigne["Coefficient correcteur"] = "-"  //Non corrigé
+                }
                
                tousLesResultats.push(nouvelleLigne)
            }
@@ -484,7 +601,7 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
         path: req.file.path,
         size: req.file.size
       }
-    });
+    })
   } catch (error) {
     res.status(500).json({ error: 'Erreure Sauvegarde' })
   }
