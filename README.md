@@ -38,6 +38,7 @@ ENSUITE :
 Cliquer sur le bouton Execute / Play (triangle noir)
 - soit ligne de cmd : psql -U postgres -d EcoForumV4 -f EcoForumV4.sql
 
+se mettre dans dossier racine : npm install (installe tous les imports et dépendances)
 se mettre dans /mon-projet
 pour lancer le client et le serveur en simultané : lancer "npm run dev:all"
 
