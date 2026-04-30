@@ -1,6 +1,8 @@
 import psycopg2
 import pandas as pd
 import os
+import sys
+import platform
 import csv
 import re
 from pathlib import Path
@@ -9,6 +11,30 @@ import argparse
 from openpyxl import load_workbook
 import shutil
 from datetime import datetime
+from dotenv import load_dotenv #ajout connexion générale
+
+#pour que sur windows ou mac les chemins fichiers soient les mêmes
+def normaliser_chemin(chemin):
+    """Convertit un chemin Windows en chemin valide pour l'OS courant"""
+    if not chemin:
+        return chemin
+    
+    #remplacer les \ par des /
+    chemin = chemin.replace('\\', '/')
+    
+    #enlever le './' ou '.\\' au début si présent
+    if chemin.startswith('./') or chemin.startswith('.\\'):
+        chemin = chemin[2:]
+    elif chemin.startswith('.'):
+        chemin = chemin[1:]
+    
+    #sur Mac/Linux, depuis Base_de_donnees, il faut remonter d'un dossier
+    if sys.platform != "win32":
+        #si le chemin ne commence pas déjà par ../
+        if not chemin.startswith('/') and not chemin.startswith('../'):
+            chemin = './' + chemin
+    
+    return chemin
 
 def format_timestamp(date):
     if date == None :
@@ -93,8 +119,10 @@ def integration_hobo(ficjson):
     with open(ficjson, "r", encoding="utf-8") as f:
         data = json.load(f)
 
+    #normalisation du chemin continue ici
+    data["chemin_source"] = normaliser_chemin(data["chemin_source"])
     fichier = data["chemin_source"]
-
+    
     # Charger uniquement le premier onglet avec pandas
     df = pd.read_excel(fichier, sheet_name=0)
 
@@ -336,7 +364,9 @@ def integration_hobo(ficjson):
                 id_responsable_fic = cur.fetchone()[0]
 
             #étape 4 : copier le fichier dans un répertoire qui symbolisera le NAS et donner un nom unique au fichier : exemple, nom_fic_date_aujd
-            #chemin_NAS = os.path.join(os.getcwd(), "NAS\\"+data['nom_outil'].lower())
+            chemin_NAS = os.path.join(os.getcwd(), "NAS/"+data['nom_outil'].lower())
+            #le créer s'il existe pas
+            os.makedirs(chemin_NAS, exist_ok=True)
             chemin_NAS = os.path.join(os.getcwd(), "NAS", data['nom_outil'].lower())
             print(chemin_NAS)
             nom_fic = Path(data["chemin_source"]).stem
@@ -373,13 +403,25 @@ if __name__ == "__main__":
     parser.add_argument("--json")
     args = parser.parse_args()
 
+    load_dotenv()
+
+
     # Connexion à la base
+    
+    #conn = psycopg2.connect(
+        #host="localhost",
+        #database="eco_forum",
+        #user="postgres",
+        #password="123456",
+        #port=5432
+    #)
+
     conn = psycopg2.connect(
-        host="localhost",
-        database="eco_forum",
-        user="postgres",
-        password="123456",
-        port=5432
+        host=os.getenv("DB_HOST", "localhost"),
+        database=os.getenv("DB_NAME", "eco_forum"),
+        user=os.getenv("DB_USER", "postgres"),
+        password=os.getenv("DB_PASSWORD", ""),
+        port=os.getenv("DB_PORT", 5432)
     )
 
     #Création du curseur qui nous permettra de faire les requêtes

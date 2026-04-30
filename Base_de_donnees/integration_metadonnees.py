@@ -5,6 +5,8 @@ import csv
 import re
 from pathlib import Path
 import argparse
+from dotenv import load_dotenv #ajout
+
 
 def format_date(date):
     if date == None :
@@ -227,28 +229,38 @@ if __name__ == "__main__" :
     parser.add_argument("--ficProj", default="videProj.xlsx")
     args = parser.parse_args()
 
+load_dotenv()
+
 
 # Connexion à la base
-    conn = psycopg2.connect(
-        host="localhost",
-        database="eco_forum",
-        user="postgres",
-        password="123456",
-        port=5432
-    )
+    #conn = psycopg2.connect(
+        #host="localhost",
+        #database="eco_forum",
+        #user="postgres",
+        #password="123456",
+        #port=5432
+    #)
 
-    #Création du curseur qui nous permettra de faire les requêtes
-    cur = conn.cursor()
+conn = psycopg2.connect(
+    host=os.getenv("DB_HOST"),
+    database=os.getenv("DB_NAME"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    port=os.getenv("DB_PORT")
+)
 
-    #Appel à la fonction qui va ajouter les données stockées dans les fichiers de métadonnées en .xlsx
-    integration_fichier_metadonnees(args.ficPers, args.ficInstr, args.ficLoc, args.ficProj)
-    """
-    python3 integration_metadonnees.py --ficPers Metadonnees_personnes.xlsx --ficInstr Metadonnees_instruments_capteurs.xlsx --ficLoc Metadonnees_localisations.xlsx --ficProj Metadonnees_projets.xlsx
-    """
+ #Création du curseur qui nous permettra de faire les requêtes
+cur = conn.cursor()
 
-    #Pour faire passer les modifications à la base de données
-    conn.commit()
+#Appel à la fonction qui va ajouter les données stockées dans les fichiers de métadonnées en .xlsx
+integration_fichier_metadonnees(args.ficPers, args.ficInstr, args.ficLoc, args.ficProj)
+"""
+python3 integration_metadonnees.py --ficPers Metadonnees_personnes.xlsx --ficInstr Metadonnees_instruments_capteurs.xlsx --ficLoc Metadonnees_localisations.xlsx --ficProj Metadonnees_projets.xlsx
+"""
 
-    #Fermeture du curseur et de la connexion
-    cur.close()
-    conn.close()
+#Pour faire passer les modifications à la base de données
+conn.commit()
+
+#Fermeture du curseur et de la connexion
+cur.close()
+conn.close()

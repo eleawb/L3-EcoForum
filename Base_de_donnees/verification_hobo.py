@@ -2,12 +2,37 @@ import psycopg2
 import pandas as pd
 import os
 import csv
+import sys 
 import re
 from pathlib import Path
 import json
 import argparse
 from openpyxl import load_workbook
 from datetime import datetime
+from dotenv import load_dotenv #ajout
+
+#pour que sur windows ou mac les chemins fichiers soient les mêmes
+def normaliser_chemin(chemin):
+    """Convertit un chemin Windows en chemin valide pour l'OS courant"""
+    if not chemin:
+        return chemin
+    
+    #remplacer les \ par des /
+    chemin = chemin.replace('\\', '/')
+    
+    #enlever le './' ou '.\\' au début si présent
+    if chemin.startswith('./') or chemin.startswith('.\\'):
+        chemin = chemin[2:]
+    elif chemin.startswith('.'):
+        chemin = chemin[1:]
+    
+    #sur Mac/Linux, depuis Base_de_donnees, il faut remonter d'un dossier
+    if sys.platform != "win32":
+        #si le chemin ne commence pas déjà par ../
+        if not chemin.startswith('/') and not chemin.startswith('../'):
+            chemin = './' + chemin
+    
+    return chemin
 
 
 def expand_item(item):
@@ -80,6 +105,9 @@ def verification_hobo(metajson):
 
     with open(metajson, "r", encoding="utf-8") as f:
         data = json.load(f)
+
+        #normalisation du chemin
+        data["chemin_source"] = normaliser_chemin(data["chemin_source"])
 
     dico = {
         "numero_serie" : "",
@@ -186,20 +214,41 @@ if __name__ == "__main__":
     parser.add_argument("--json")
     args = parser.parse_args()
 
+    if len(sys.argv) != 2:
+        dico = {}
+        dico["commentaire"] = "Usage : ./verification_hobo.py JSON/verification_Hobo.json"
+        dico["reussite"] = False
+        with open("retour.json", "w", encoding="utf-8") as f:
+            json.dump(dico, f, indent=4, ensure_ascii=False)
+        print(os.path.join(os.getcwd(), "retour.json"))
+
+    else :
+
+
+        load_dotenv()
+
+
     # Connexion à la base
-    conn = psycopg2.connect(
-        host="localhost",
-        database="eco_forum",
-        user="postgres",
-        password="123456",
-        port=5432
-    )
+    #conn = psycopg2.connect(
+        #host="localhost",
+        #database="eco_forum",
+        #user="postgres",
+        #password="123456",
+        #port=5432
+    #)
+        conn = psycopg2.connect(
+            host=os.getenv("DB_HOST", "localhost"),
+            database=os.getenv("DB_NAME", "eco_forum"),
+            user=os.getenv("DB_USER", "postgres"),
+            password=os.getenv("DB_PASSWORD", ""),
+            port=os.getenv("DB_PORT", 5432)
+        )
 
-    #Création du curseur qui nous permettra de faire les requêtes
-    cur = conn.cursor()
+        #Création du curseur qui nous permettra de faire les requêtes
+        cur = conn.cursor()
 
-    verification_hobo(args.json)
+        verification_hobo(args.json)
 
-    # Fermeture curseur et connexion à la base
-    cur.close()
-    conn.close()
+        # Fermeture curseur et connexion à la base
+        cur.close()
+        conn.close()

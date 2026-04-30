@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config({path: '../Base_de_donnees/.env'})
 
 const express = require('express')
 const cors = require('cors')
@@ -41,7 +41,7 @@ const client = new Client({
     password: process.env.DB_PASSWORD,
     host: process.env.DB_HOST,
     database: process.env.DB_NAME,
-    port: 5432,
+    port: process.env.DB_PORT,
   }) //tout le monde a son fichier .env avec son user+mdp au lieu de chacun envoyer sur sa bdd
 
 client.connect()
@@ -142,6 +142,7 @@ app.post('/api/recherche', async (req, res) => {
                 i.nom_outil,
                 sf.nb_colonnes,
                 sf.nom_colonnes,
+                sf.colonnes_a_traiter,
                 sf.nom_instrument as structure_nom
             FROM instrument_mesure i
             JOIN structure_fichier sf ON sf.id_structure = i.id_structure
@@ -155,6 +156,7 @@ app.post('/api/recherche', async (req, res) => {
                 m.id_mesure,
                 m.description_mesure,
                 i.id_instrument,
+                m.valeur_mesure,
                 i.nom_outil as instrument,
                 i.modele,
                 i.num_instrument,
@@ -162,10 +164,12 @@ app.post('/api/recherche', async (req, res) => {
                 m.date_heure
             FROM mesure m
             JOIN serie_temporelle st ON st.id_st = m.id_st
-            JOIN capteur_generique cg ON cg.id_capteur_generique = st.id_capteur_gen
-            JOIN capteur c ON c.id_capteur = cg.id_capteur_generique
+            JOIN capteur_localise cl ON cl.id_capteur_gen = st.id_capteur_gen            
+            JOIN capteur c ON c.id_capteur = cl.id_capteur_gen
+            JOIN capteur_generique cg ON cg.id_capteur_generique = c.id_capteur
             JOIN instrument_mesure i ON i.id_instrument = c.id_instrument
             WHERE i.id_instrument = ANY($1::int[])
+
         `
         
         let params = [idsNumbers]
@@ -262,16 +266,36 @@ app.post('/api/recherche', async (req, res) => {
         for (const struct of structures.rows) {
             let nomsColonnes = []
             if (struct.nom_colonnes) {
-                nomsColonnes = struct.nom_colonnes.split(';').map(col => col.trim()) //elles sont récupérées ss format col1;col2;col3 donc on split
-                // nettoyage des noms (|| à enlever)
-                nomsColonnes = nomsColonnes.map(col => {
-                    if (col.includes('||')) {
-                        return col.split('||')[0].trim() //on récupère le premier nom
-                    }
-                    return col
+                const toutesLesColonnes = struct.nom_colonnes.split(';').map(col => col.trim())
+                const colonnesATraiter = struct.colonnes_a_traiter ? struct.colonnes_a_traiter.split(';').map(c => c.trim()) : []
+                
+                // DEBUG
+                console.log("🔍 DEBUG - struct:", {
+                    nom_instrument: struct.nom_instrument,
+                    toutesLesColonnes: toutesLesColonnes,
+                    colonnesATraiter: colonnesATraiter
                 })
-            } else { //si pas d'entêtes, on met des noms par défaut pour pouvoir les cocher ou décocher
-                 for (let i = 1; i <= struct.nb_colonnes; i++) {
+                
+                for (let i = 0; i < toutesLesColonnes.length; i++) {
+                    let colName = toutesLesColonnes[i]
+                    
+                    // Nettoyer les || : ne garder que la première partie
+                    if (colName.includes('||')) {
+                        colName = colName.split('||')[0].trim()
+                    }
+                    
+                    const estATraiter = colonnesATraiter[i] && colonnesATraiter[i].trim() === '1'
+                    const estDateOuHeure = colName.toLowerCase().includes('date') || colName.toLowerCase().includes('heure')
+                    
+                    if (estATraiter) {
+                        nomsColonnes.push(colName)
+                    }
+                    if (estDateOuHeure) {
+                        nomsColonnes.push(colName)
+                    }
+                }
+            } else {
+                for (let i = 1; i <= struct.nb_colonnes; i++) {
                     nomsColonnes.push(`colonne_${i}`)
                 }
             }
@@ -321,16 +345,20 @@ app.post('/api/recherche', async (req, res) => {
        const entetesGlobales = Array.from(uniqueColonnes.keys())
        
        // construction des résultats
-       let tousLesResultats = []
-       
-       for (const [id, instrument] of instrumentsMap) {
-           if (instrument.mesures.length === 0) continue
-           
-           for (const row of instrument.mesures) {
-               const nouvelleLigne = {}
-               
-               nouvelleLigne["Instrument"] = row.instrument //colonnes de base pour rappel de l'instrument choisi
-               nouvelleLigne["Capteur"] = row.capteur
+       const idsMesureVus = new Set() //Set pr éviter les doublons
+        let tousLesResultats = []
+
+        for (const [id, instrument] of instrumentsMap) {
+            if (instrument.mesures.length === 0) continue
+            
+            for (const row of instrument.mesures) {
+                // Ignorer les doublons d'id_mesure
+                if (idsMesureVus.has(row.id_mesure)) continue
+                idsMesureVus.add(row.id_mesure)
+                
+                const nouvelleLigne = {}
+                nouvelleLigne["Instrument"] = row.instrument
+                nouvelleLigne["Capteur"] = row.capteur
 
                /* formater la date et l'heure
                if (row.date_heure) {
@@ -341,29 +369,37 @@ app.post('/api/recherche', async (req, res) => {
                 nouvelleLigne["Date"] = '-' //sinon vide
                 nouvelleLigne["Heure"] = '-'
             }*/
+           
                // remplissage des colonnes avec les vrais noms
-               for (let i = 0; i < instrument.nomsColonnes.length; i++) {
-                   const colName = instrument.nomsColonnes[i]
-                   if (row.description_mesure) {
-                       const valeurs = row.description_mesure.split(';')
-                       nouvelleLigne[colName] = valeurs[i] || '-' //si pas de valeurs, -
-                   } else {
-                       nouvelleLigne[colName] = '-'
-                   }
-               }
-               
-               // pour les colonnes qui existent dans d'autres instruments mais pas dans celui-ci
-               for (const entete of entetesGlobales) {
-                   if (nouvelleLigne[entete] === undefined && entete !== 'Instrument' && entete !== 'Capteur' && entete !== 'Date' && entete !== 'Heure') {
-                       nouvelleLigne[entete] = '-'
-                   }
-               }
+                for (let i = 0; i < instrument.nomsColonnes.length; i++) {
+                    const colName = instrument.nomsColonnes[i]
+                    
+                    // Si c'est la colonne de donnée (la seule qui n'est pas Instrument, Capteur, Date)
+                    if (colName !== "Instrument" && colName !== "Capteur" && 
+                        !colName.toLowerCase().includes('date') && !colName.toLowerCase().includes('heure')) {
+                        // Valeur mesurée
+                        if (row.valeur_mesure !== null && row.valeur_mesure !== undefined) {
+                            nouvelleLigne[colName] = row.valeur_mesure
+                        } else {
+                            nouvelleLigne[colName] = '-'
+                        }
+                    }
+                    // Si c'est la colonne date/heure
+                    else if (colName.toLowerCase().includes('date') || colName.toLowerCase().includes('heure')) {
+                        nouvelleLigne[colName] = row.date_heure 
+                            ? new Date(row.date_heure).toLocaleString('fr-FR')
+                            : '-'
+                    }
+                    else {
+                        nouvelleLigne[colName] = '-'
+                    }
+}
                
                tousLesResultats.push(nouvelleLigne)
            }
        }
        
-       const previewResultats = tousLesResultats.slice(0, 40)
+       const previewResultats = tousLesResultats.slice(0, 20)
        
        //envoi des résultats 
        res.json({
