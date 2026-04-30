@@ -22,7 +22,9 @@ import {
 } from '@mui/material'
 
 function ResultatsRecherche() {
+
     const navigate = useNavigate()
+
     const location = useLocation()
     const [previewResultats, setPreviewResultats] = useState<any[]>([]) //récupérer les 20 résultats pour la preview
     const [resultats, setResultats] = useState<any[]>([]) //récupérer tous les résultats
@@ -32,16 +34,16 @@ function ResultatsRecherche() {
     const [colonnesSelectionnees, setColonnesSelectionnees] = useState<Set<string>>(new Set()) //récupérer le choix des colonnes que l'user souhaite garder
 
     useEffect(() => {
-        // récupérer les résultats passés par la navigation
+        //récupérer les résultats passés par la navigation
         if (location.state) {
-            setPreviewResultats(location.state.previewResultats || [])
-            setResultats(location.state.resultats||[])
+            setPreviewResultats(location.state.previewResultats || []) //si pas de previewResultats, mise à []
+            setResultats(location.state.resultats||[]) //idem pour resultats
 
             //debugs
             console.log("Résultats reçus:", location.state.previewResultats?.length||0, "affichés en preview sur les", location.state.resultats?.length||0, "totaux") //si résultats undefined, ça bug donc mettre à 0
             console.log("Entêtes des colonnes :", location.state.entetes)
         
-            // récupérer les entêtes depuis le backend
+            //récupérer les entêtes sans doublons depuis le backend
             if (location.state.entetes && location.state.entetes.length > 0) {
                 const entetesSansDoublons = []
                 for (let i = 0; i < location.state.entetes.length; i++) {
@@ -53,7 +55,7 @@ function ResultatsRecherche() {
                 setColonnes(entetesSansDoublons)
                 setColonnesSelectionnees(new Set(entetesSansDoublons))
             } else if (location.state.previewResultats && location.state.previewResultats.length > 0) {
-                // Fallback: récupérer depuis les données (exclure les champs internes)
+                //on récupere depuis les données (exclure les champs internes)
                 const cols = Object.keys(location.state.previewResultats[0])
                 setColonnes(cols)
                 setColonnesSelectionnees(new Set(cols))
@@ -62,10 +64,10 @@ function ResultatsRecherche() {
         setLoading(false)
     }, [location])
 
-        // gérer sélection/désélection d'une colonne et en gardant l'ordre
+        //pour gérer sélection/désélection d'une colonne et en gardant l'ordre
         const ColonneChange = (colonne: string) => {
             setColonnesSelectionnees(prev => {
-                const newSelection = new Set(prev)
+                const newSelection = new Set(prev) //set pour garder l'ordre et pas de doublons
                 if (newSelection.has(colonne)) {
                     newSelection.delete(colonne)
                 } else {
@@ -94,11 +96,11 @@ function ResultatsRecherche() {
         const colonnesAAfficher = colonnes.filter(col => colonnesSelectionnees.has(col))
         const csvRows = [colonnesAAfficher]
 
-        // ajouter les données
+        //ajouter les données
         for (const row of resultats) {
             const ligne = colonnesAAfficher.map(col => {
                 let valeur = row[col] || ''
-                // Si la valeur contient des guillemets ou points-virgules, on l'encapsule
+                //si la valeur contient des '' ou ; on l'encapsule
                 if (typeof valeur === 'string' && (valeur.includes(';') || valeur.includes('"'))) {
                     valeur = `"${valeur.replace(/"/g, '""')}"`
                 }
@@ -107,9 +109,9 @@ function ResultatsRecherche() {
             csvRows.push(ligne)
         }
         
-        // Télécharger le fichier
+        //télécharger le fichier 
         const csvContent = csvRows.map(row => row.join(';')).join('\n')
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }) //blob = représente un objet, semblable à un fichier, qui est immuable et qui contient des données brutes
         const link = document.createElement('a')
         const url = URL.createObjectURL(blob)
         link.href = url
@@ -123,17 +125,20 @@ function ResultatsRecherche() {
 
     return (
         <Box sx={{ flexGrow: 1 }}>
+            {/*barre navigation*/}
             <AppBar position="static" sx={{ bgcolor: "#0370B2" }}>
                 <Toolbar>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                         RÉSULTATS DE LA RECHERCHE
                     </Typography>
 
+                    {/*redirection menu principal*/}
                     <Button color="inherit" onClick={() => navigate('/')}>
                          MENU
                     </Button>
 
-                    <Button color="inherit" onClick={() => navigate('/recherche')}>
+                    {/*redirection recherche de données*/}
+                    <Button color="inherit" onClick={() => navigate('/recherche')}> 
                         NOUVELLE RECHERCHE
                     </Button>
 
@@ -148,40 +153,49 @@ function ResultatsRecherche() {
                         <br></br>
                     </Typography>
                     
+                    {/*boucle d'affichage propre au nb de résultats*/}
                     {loading ? (
                         <CircularProgress />
-                    ) : resultats.length === 0 ? (
-                        <Typography color="error" sx={{ textAlign: 'center', py: 4 }}>
+
+                        //si aucun résultat:
+                    ) : resultats.length === 0 ? ( 
+                        <Typography color="error" sx={{ textAlign: 'center', py: 4 }}> 
                             Aucun résultat trouvé pour votre recherche
                         </Typography>
+
+                        //si 1 seul résultat : 
                     ) : resultats.length === 1 ? (
                             <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
                                 {resultats.length} résultat trouvé
                             </Typography>
                     ) : (
                         <>
+                        {/*si plusieurs résultats*/}
                         <Typography variant="body2" sx={{ mb: 2, color: '#666' }}>
                         {resultats.length} résultats trouvés
                         </Typography>
                         
                            
-                            {/* Checkboxes pour choisir les colonnes */}
+                            {/* Checkbox pour choisir les colonnes à afficher dans le csv */}
                             <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
                                 <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                                     <FormControlLabel
                                         control={
                                             <Checkbox
-                                                checked={colonnesSelectionnees.size === colonnes.length && colonnes.length > 0}
+                                                //si toutes les colonnes sont sélectionnées
+                                                checked={colonnesSelectionnees.size === colonnes.length && colonnes.length > 0} 
                                                 onChange={SelectTout}
                                                 size="small"
                                             />
                                         }
                                         label={
+                                            //bouton tout sélectionner pr aller plus vite
                                             <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
                                               Tout sélectionner
                                             </Typography>
                                             }
                                     />
+                                    {/*choix des colonnes*/}
                                     {colonnes.map((col) => (
                                         <FormControlLabel
                                             key={col}
@@ -199,7 +213,10 @@ function ResultatsRecherche() {
                             </Paper>
                             
                             <TableContainer component={Paper} sx={{ maxHeight: 500, overflowX: 'auto' }}>
+                                {/*résultats affichés avec le nom des colonnes*/}
                                 <Table stickyHeader size="small">
+
+                                    {/*affichage des noms des colonnes*/}
                                     <TableHead>
                                         <TableRow>
                                         {colonnes.filter(col => colonnesSelectionnees.has(col)).map((col, index) => (
@@ -207,11 +224,13 @@ function ResultatsRecherche() {
                                             ))}
                                         </TableRow>
                                     </TableHead>
+
+                                    {/*affichage des données de preview (que 20)*/}
                                     <TableBody>
                                         {previewResultats.map((row, idx) => (
                                             <TableRow key={idx} hover>
                                                 {colonnes.filter(col => colonnesSelectionnees.has(col)).map((col, colIdx) => (                                                    <TableCell key={`${idx}-${colIdx}`}>
-                                                        {row[col] || '-'}
+                                                        {row[col] || '-'} {/*si pas de données, on met -*/}
                                                     </TableCell>
                                                 ))}
                                             </TableRow>
@@ -220,14 +239,15 @@ function ResultatsRecherche() {
                                 </Table>
                             </TableContainer>
                             
+                            {/*téléchargement des données*/}
                             <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 3 }}>
                                 <Button
                                     variant="contained"
-                                    startIcon={<DownloadIcon />}
-                                    onClick={telechargerCSV}
+                                    startIcon={<DownloadIcon />} //icône téléchargement
+                                    onClick={telechargerCSV} //fonction de téléchargement
                                     sx={{
                                         bgcolor: '#0370B2',
-                                        '&:hover': { bgcolor: '#00517C' },
+                                        '&:hover': { bgcolor: '#00517C' }, //plus sombre quand on passe sur le bouton
                                     }}
                                 >
                                     Télécharger les résultats (CSV)

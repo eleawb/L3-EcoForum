@@ -1,5 +1,5 @@
-import { useState } from 'react'; 
-import { useNavigate } from 'react-router-dom'; //pr navigation
+import { useState } from 'react' 
+import { useNavigate } from 'react-router-dom' //pr navigation
 import {
   AppBar,
   Toolbar,
@@ -12,26 +12,20 @@ import {
   CardContent,
   TextField,
   Stack //aligner boutons en colonne par ex
-} from '@mui/material'; //import MUI
-import { Person as PersonIcon, Add as AddIcon, Delete as DeleteIcon, Search as SearchIcon, Settings as SettingsIcon } from '@mui/icons-material'; //icônes texte
-
-/*
-interface Item {
-  id: number;
-  nom: string;
-  description: string;
-}*/
-
+} from '@mui/material'//import MUI
+import { Person as PersonIcon, Add as AddIcon, Delete as DeleteIcon, Search as SearchIcon, Settings as SettingsIcon } from '@mui/icons-material' //icônes visuelles
 
 
 function Accueil() { //composant principal
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   return (
     <Box sx={{ flexGrow: 1 }}> {/*sx = prop de style de MUI
                                   flexGrow : 1 prend tt l'espace visuel dispo */}
-      <AppBar position="static"> {/*barre de navigation*/}
-        <Toolbar>
+      
+      {/*barre de navigation*/}
+      <AppBar position="static"> 
+        <Toolbar> {/*éléments de la barre nav situés à côté*/}
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             EcoForum
           </Typography>
@@ -54,61 +48,64 @@ function Accueil() { //composant principal
         <Typography variant="h5" gutterBottom sx={{ color: '#5d4037' }}> {/*gutterBottom : ajoute une marge en bas*/}
             <center><b>MENU PRINCIPAL</b></center>
           </Typography>
-          <Stack spacing={2} sx={{ width: '100%', maxWidth: 400 }}> {/*alignement entre bouton*/}
+          <Stack spacing={2} sx={{ width: '100%', maxWidth: 400 }}> {/*alignement entre boutons*/}
           
+            {/*AJOUT DE DONNÉES*/}
             <Button
               variant="contained" //bouton rempli
-              startIcon={<AddIcon />}
-              onClick={() => navigate('/ajout')} //redirection
+              startIcon={<AddIcon />} //icônes +
+              onClick={() => navigate('/ajout')} //redirection ajout de données
               size="large"
               sx={{
                 py:1.5,
               bgcolor :'#EC9706',
-              '&:hover': { bgcolor: '#C78023' } //qd on passe dessus
+              '&:hover': { bgcolor: '#C78023' } //qd on passe dessus, la couleur est plus sombre
               }}
             >
                 AJOUTER DES DONNÉES
             </Button>
         
-        <Button
+            {/*RECHERCHE DE DONNÉES*/}
+            <Button
               variant="contained"
-              startIcon={<SearchIcon />}
-              onClick={() => navigate('/recherche')} //redirection
+              startIcon={<SearchIcon />} //icône loupe
+              onClick={() => navigate('/recherche')} //redirection recherche de données
               size="large"
               sx={{
                 py:1.5,
               bgcolor :'#0370B2',
-              '&:hover': { bgcolor: '#00517C' } //qd on passe dessus
+              '&:hover': { bgcolor: '#00517C' } //qd on passe dessus, la couleur est plus sombre
               }}
               >
               RECHERCHER DES DONNÉES
             </Button>
       
+            {/*INSTRUMENTS DE MESURE*/}
             <Button
               variant="contained"
-              startIcon={<SettingsIcon />}
-              onClick={() => navigate('/materiel')}
+              startIcon={<SettingsIcon />} //icône params
+              onClick={() => navigate('/materiel')} //redirection onglet instruments de mesure
               size="large"
               sx={{
                 py:1.5,
               bgcolor :'#808080',
-              '&:hover': { bgcolor: '#515151' } //qd on passe dessus
+              '&:hover': { bgcolor: '#515151' } //qd on passe dessus, la couleur est plus sombre
               }}
               >
               INSTRUMENTS DE MESURE
             </Button>
 
 
-
+              {/*GESTION USER*/}
             <Button
               variant="contained" //bouton rempli
-              startIcon={<PersonIcon />}
-              onClick={() => navigate('/user')} //redirection
+              startIcon={<PersonIcon />} //icône personne
+              onClick={() => navigate('/user')} //redirection onglet utilisateur
               size="large"
               sx={{
                 py:1.5,
               bgcolor :'#A84296',
-              '&:hover': { bgcolor: '#6F1478' } //qd on passe dessus
+              '&:hover': { bgcolor: '#6F1478' } //qd on passe dessus, la couleur est plus sombre
               }}
             >
                 GESTION UTILISATEUR
@@ -120,7 +117,7 @@ function Accueil() { //composant principal
       </Container>
     </Box>
    
-  );
+  )
 }
 
-export default Accueil;
+export default Accueil

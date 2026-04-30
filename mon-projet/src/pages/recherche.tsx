@@ -36,6 +36,7 @@ import {
 function Recherche() {
     const navigate = useNavigate()
 
+    //récupération des instruments et catégories depuis la bdd
     const [instrumentsDisponibles, setInstrumentsDisponibles] = useState<any[]>([]) //instruments disponibles selon la catégorie / bdd en général
     const [chargement, setChargement] = useState(true) //boucle de chargement si la récupération initiale des instruments de la bdd est trop long ou pb infini
     const [categories, setCategories] = useState<any[]>([]) //récupérer les catégories de la bdd
@@ -52,30 +53,31 @@ function Recherche() {
 
     // méthodes de datation
     //si choix dates précises
-    const [datesPrecises, setDatesPrecises] = useState(false)
+    const [datesPrecises, setDatesPrecises] = useState(false) //si on choisit la datation précise
     const [datesPrecisesAjoutees, setDatesPrecisesAjoutees] = useState<Array<{id: string, type: string, valeur: string, plagesHoraires?: Array<{debut: string, fin: string}>}>>([]) //+plages horaire incluses
     const [heuresPrecisesPlages, setHeuresPrecisesPlages] = useState<Array<{id: string, debut: string, fin: string}>>([])
     const [jourDejaAjoute, setJourDejaAjoute] = useState(false) //on ne peut cliquer qu'une fois sur "jour(s)" car pas une plage journalière
-    const [heurePreciseDejaAjoutee, setHeurePreciseDejaAjoutee] = useState(false)
+    const [heurePreciseDejaAjoutee, setHeurePreciseDejaAjoutee] = useState(false) //on clique qu'une fois sur heure (car on peut ajouter des plages horaires)
 
     //si choix périodes temporelles
-    const [periodesTemp, setPeriodesTemp] = useState(false) 
+    const [periodesTemp, setPeriodesTemp] = useState(false) //si on choisit la datation par périodes
       const [joursSemaine, setJoursSemaine] = useState<string[]>([]) // alors, états pour les jours de la semaine
-      const [periodesAjoutees, setPeriodesAjoutees] = useState<Array<{id: string, type: string, valeur: string}>>([]) //états pour gérer les sélections d'heure, jour, mois ou semaine
+      const [periodesAjoutees, setPeriodesAjoutees] = useState<Array<{id: string, type: string, valeur: string}>>([]) //états pour gérer les sélections d'heure, jour, mois
       const [heuresPlages, setHeuresPlages] = useState<Array<{id: string, debut: string, fin: string}>>([]) // etat pour stock les différentes plages horaires choisies
-    const [heureDejaAjoutee, setHeureDejaAjoutee] = useState(false)
-    const [moisDejaAjoute, setMoisDejaAjoute] = useState(false)
-    const [anneeDejaAjoutee, setAnneeDejaAjoutee] = useState(false)
-const [joursDejaAjoutes, setJoursDejaAjoutes] = useState(false)
+      
+      const [joursDejaAjoutes, setJoursDejaAjoutes] = useState(false) //on ne peut cliquer qu'une fois pr les jours
+      const [heureDejaAjoutee, setHeureDejaAjoutee] = useState(false) //on ne peut cliquer qu'une seule fois sur heure (sinon on ajoute directement des plages horaires)
+    const [moisDejaAjoute, setMoisDejaAjoute] = useState(false) //idem pour les mois
+    const [anneeDejaAjoutee, setAnneeDejaAjoutee] = useState(false) //idem pour les annees
 
-      // années sélectionnées
-  const [anneesSelectionnees, setAnneesSelectionnees] = useState<string[]>([])
-  // liste des années disponibles 
-  const [anneesDisponibles, setAnneesDisponibles] = useState<string[]>([])
+      //années sélectionnées
+    const [anneesSelectionnees, setAnneesSelectionnees] = useState<string[]>([])
+    // liste des années disponibles (par défaut de 2020 à année actuelle)
+    const [anneesDisponibles, setAnneesDisponibles] = useState<string[]>([])
 
 
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchData = async () => { //on récupère les données de la bdd
             console.log("début du fetch data")
             try {
 
@@ -102,11 +104,12 @@ const [joursDejaAjoutes, setJoursDejaAjoutes] = useState(false)
 
     //recup les ss catégories d'une catégorie
     const getToutesSScat = (categorieNom: string): string[] => {
-      if (!categorieNom|| categorieNom === 'null' || categorieNom === 'undefined') return [] //si pas réussi à récupérer les noms des catégories
+      if (!categorieNom|| categorieNom === 'null' || categorieNom === 'undefined') return [] //si pas réussi à récupérer les noms des catégories, []
       const result: string[] = [categorieNom]
+      //on récupère les catégories parentes
       const categorie = categories.find(c => c.nom === categorieNom)
       if (!categorie) return result
-      
+      //puis les catégories enfants
       const enfants = categories.filter(c => c.id_parent === categorie.id_categorie) //classer catégories parents et enfants
       for (const enfant of enfants) {
         if (enfant && enfant.nom && enfant.nom!=='null') {
@@ -116,25 +119,25 @@ const [joursDejaAjoutes, setJoursDejaAjoutes] = useState(false)
       return result.filter(c => c && c.trim() !== '') //pour pas reucp les erreurs
   }
 
-    // changement de catégorie pour les instruments
+    //dynamisme selon le changement de catégorie pour les instruments (selon le choix de l'user)
     const CategorieChangePourInstrument = async (values: string[]) => {
       console.log("ids des catégories sélectionnées:", values) //debug
       
-      setCategoriesSelectionnees(values)
+      setCategoriesSelectionnees(values) //récupère les catégories sélectionnées
       setInstrumentsSelectionnes([]) //pas encore sélectionné les instruments
       setSelectTout(false) //pas encore coché "tout sélectionner"
   
-      if (values.length === 0) { 
+      if (values.length === 0) {  //si aucune catégorie, on affiche quand même les instruments
           setInstrumentsFiltres(instrumentsDisponibles)
           setMessageErreur('')
 
           return
       }
 
-      // Convertir en nbs pour l'API
+      //convertir en nbs pour l'API
       const idsNumbers = values.map(v => parseInt(v, 10))
       
-      // Récupérer les noms des catégories pour l'API
+      //récupérer les noms des catégories pour l'API
       const nomsCategories = idsNumbers.map(id => {
           const cat = categories.find(c => c.id_categorie === id)
           return cat?.nom //cat? = si cat null ou undefined, retourne undefined et pas erreur
@@ -144,20 +147,22 @@ const [joursDejaAjoutes, setJoursDejaAjoutes] = useState(false)
 
       
       try {
-          const response = await fetch('http://localhost:3000/api/instruments/by-categories', { 
+          const response = await fetch('http://localhost:3000/api/instruments/by-categories', {  //on lance la recherche d'instruments par catégorie
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ categories: nomsCategories })
+              body: JSON.stringify({ categories: nomsCategories }) //conversion
           })
           
-          if (response.ok) { //on a bien récupéré qq chose
-              const data = await response.json()
-              setInstrumentsFiltres(data)
+          if (response.ok) { //si on a bien récupéré qq chose
+              const data = await response.json() //conversion
+              setInstrumentsFiltres(data) //on les ajoute dans le filtre
               //tester quand même si rien trouvé :
               if (data.length === 0) {
-                // Construire le message d'erreur avec les noms des catégories
+                //construire le message d'erreur dynamique avec les noms des catégories
+                //si plusieurs catégories sélectionnées : 
                 const message = nomsCategories.length > 1 
                     ? `Aucun instrument ne correspond aux catégories "${nomsCategories.join(', ')}"`
+                    //si une seule catégorie sélectionnée :
                     : `Aucun instrument ne correspond à la catégorie "${nomsCategories[0]}"`
                 setMessageErreur(message)
             } else {
@@ -165,13 +170,16 @@ const [joursDejaAjoutes, setJoursDejaAjoutes] = useState(false)
             }
           } else { //si pb à la récupération
               setInstrumentsFiltres([])
+               //construire le message d'erreur dynamique avec les noms des catégories
+               //plusieurs catégories sélectionnées
               const message = nomsCategories.length > 1 
                 ? `Aucun instrument ne correspond aux catégories "${nomsCategories.join(', ')}"`
+                //si une seule sélectionnée
                 : `Aucun instrument ne correspond à la catégorie "${nomsCategories[0]}"`
             setMessageErreur(message)
         }
           
-      } catch (error) {
+      } catch (error) { //si erreur, idem
           console.error('Erreur:', error)
           setInstrumentsFiltres([])
           const message = nomsCategories.length > 1 
@@ -182,14 +190,14 @@ const [joursDejaAjoutes, setJoursDejaAjoutes] = useState(false)
 }
     
 
- // gestion de la sélection d'un instrument
- // au lieu de stocker les noms, on stocke les ids (plus sûr)
+ //gestion de la sélection d'un instrument
+ //au lieu de stocker les noms, on stocke les ids (plus sûr)
 const InstrumentSelection = (valeurId: number) => {
   setInstrumentsSelectionnes(prev => {
       if (prev.includes(valeurId.toString())) {
           return prev.filter(v => v !== valeurId.toString())
       } else {
-          return [...prev, valeurId.toString()]
+          return [...prev, valeurId.toString()] //on déplie le tab, rajoute valeurID en string et reforme le tab ([...["2", "5"]] donne "2", "5")
       }
   })
   setSelectTout(false) //"tout sélectionner" pas coché
@@ -201,9 +209,9 @@ const InstrumentSelection = (valeurId: number) => {
 const affichageCategoriesNiveaux = (categorie: any, profondeur: number) => {
   if (!categorie || !categorie.id_categorie || !categorie.nom) return null //si pb récupération catégorie
   
-  const enfants = categories.filter(c => c.id_parent === categorie.id_categorie)
-  const estSelectionne = categoriesSelectionnees.includes(categorie.id_categorie.toString())
-  console.log("MenuItem value:", categorie.id_categorie, categorie.id_categorie.toString())
+  const enfants = categories.filter(c => c.id_parent === categorie.id_categorie) 
+  const estSelectionne = categoriesSelectionnees.includes(categorie.id_categorie.toString()) 
+  console.log("MenuItem value:", categorie.id_categorie, categorie.id_categorie.toString()) //debug
   return (
       <Box key={categorie.id_categorie}>
           <MenuItem 
@@ -214,12 +222,13 @@ const affichageCategoriesNiveaux = (categorie: any, profondeur: number) => {
                   borderBottom: profondeur === 0 ? '1px solid #eee' : 'none',
                   '&:hover': { bgcolor: '#e3f2fd' }
               }}
-          >
+          > {/*sélection*/}
               <Checkbox 
                   checked={estSelectionne} 
                   size="small"
                   sx={{ '& .MuiSvgIcon-root': { fontSize: 20 } }}
               />
+              {/*affichage dynamique*/}
               <Typography 
                   variant="body2" 
                   sx={{ 
@@ -241,13 +250,13 @@ const affichageCategoriesNiveaux = (categorie: any, profondeur: number) => {
 }
 
 
-//gestion du tt sélectionner
+//gestion du bouton tt sélectionner
 const CocheTTselectionner = () => {
-  if (!selectTout) {
+  if (!selectTout) { //si pas déjà sélectionné
     const ttesValeurs = listeInstruments.map(item => item.id_instrument.toString())
-    setInstrumentsSelectionnes(ttesValeurs)
-    setSelectTout(true)
-    console.log("tous les instruments sont sélectionnés")
+    setInstrumentsSelectionnes(ttesValeurs) //on sélectionne tous les instruments
+    setSelectTout(true) 
+    console.log("tous les instruments sont sélectionnés")//debug
       
   } else {
     setInstrumentsSelectionnes([])
@@ -256,7 +265,7 @@ const CocheTTselectionner = () => {
   
 }
 
-// Récupère tous les IDs des enfants d'une catégorie
+//récupère tous les IDs des enfants d'une catégorie
 const getAllChildrenIds = (parentId: number): string[] => {
   const enfants = categories.filter(c => c.id_parent === parentId)
   let ids: string[] = []
@@ -268,7 +277,7 @@ const getAllChildrenIds = (parentId: number): string[] => {
 }
 
 
-//rendu visuel categories
+//rendu hiérarchique visuel des categories 
 const renderCategoryTree = (categorie: any, depth: number) => {
   const enfants = categories.filter(c => c.id_parent === categorie.id_categorie)
   const isChecked = categoriesSelectionnees.includes(categorie.id_categorie.toString())
@@ -282,13 +291,13 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                       onChange={(e) => {
                           let newValues: string[]
                           if (e.target.checked) {
-                              // Ajouter la catégorie et toutes ses sous-catégories
+                              //ajouter la catégorie et toutes ses sous-catégories
                               const allChildren = getAllChildrenIds(categorie.id_categorie)
                               const tempValues = [...categoriesSelectionnees, categorie.id_categorie.toString(), ...allChildren]
-                              // Supprimer les doublons
+                              //supprimer les doublons
                               newValues = tempValues.filter((v, i, a) => a.indexOf(v) === i)
                           } else {
-                              // Retirer la catégorie et toutes ses sous-catégories
+                              //retirer la catégorie et toutes ses ss catégories
                               const allChildren = getAllChildrenIds(categorie.id_categorie)
                               newValues = categoriesSelectionnees.filter(id => 
                                   id !== categorie.id_categorie.toString() && !allChildren.includes(id)
@@ -316,14 +325,17 @@ const renderCategoryTree = (categorie: any, depth: number) => {
   )
 }
 
-
+    //bouton final "rechercher"
     const boutonSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         
+        //vérifier si minimum 1 instrument de sélectionné, quand même
         if (instrumentsSelectionnes.length===0) {
             alert('Veuillez sélectionner au moins un instrument')
             return
         }
+
+        //envoi des données selon la méthode de datation:
 
         //DATATION PRÉCISE
         //choix des dates
@@ -345,32 +357,32 @@ const renderCategoryTree = (categorie: any, depth: number) => {
             for (const periode of periodesAjoutees) {
                 switch (periode.type) {
                     case 'Jour(s)':
-                        if (periode.valeur) {
-                            periodesData.joursSemaine = periode.valeur.split(',')
+                        if (periode.valeur) { //si on a choisi un ou des jours
+                            periodesData.joursSemaine = periode.valeur.split(',') //on les sépare et on met dans le tab
                         }
                         break
                     case 'Mois':
-                        if (periode.valeur) {
-                            periodesData.mois = periode.valeur.split(',')
+                        if (periode.valeur) { //si on a choisi un ou des mois
+                            periodesData.mois = periode.valeur.split(',') //séparation + mis dans le tab
                         }
                         break
                     case 'Heure(s)':
-                        if (periode.valeur) {
-                            const [debut, fin] = periode.valeur.split('-')
+                        if (periode.valeur) { //si on a choisi des heures
+                            const [debut, fin] = periode.valeur.split('-') //séparation + mis dans le tab
                             if (debut && fin) {
                                 periodesData.heures.push({ debut, fin })
                             }
                         }
                         break
                     case 'Année(s)':
-                        periodesData.annees = anneesSelectionnees
+                        periodesData.annees = anneesSelectionnees //mis dans le tab
                         break
                 }
             }
             
-            //heures supplémentaires
+            //si on a mis des heures supplémentaires
             if (heuresPlages.length > 0) {
-                periodesData.heures.push(...heuresPlages.filter(h => h.debut && h.fin))
+                periodesData.heures.push(...heuresPlages.filter(h => h.debut && h.fin)) //mis dans le tab
             }
         }
 
@@ -381,7 +393,7 @@ const renderCategoryTree = (categorie: any, depth: number) => {
 
             //gestion des dates
             if (dateJour && dateJour.valeur) {
-                const [debut, fin] = dateJour.valeur.split('|');
+                const [debut, fin] = dateJour.valeur.split('|') //on les sépare avec |
                 
                 if (debut && fin) {
                     //verifier le format 
@@ -398,53 +410,55 @@ const renderCategoryTree = (categorie: any, depth: number) => {
                     
                     //si date début = date fin, on envoie la même date pour les deux
                     if (debut === fin) {
-                        console.log("Date unique recherchée:", dateDebutQuery);
+                        console.log("Date unique recherchée:", dateDebutQuery) //debug
                     } else {
-                        console.log("Période recherchée:", dateDebutQuery, "à", dateFinQuery);
+                        console.log("Période recherchée:", dateDebutQuery, "à", dateFinQuery) //debug
                     }
                 }
             }
             //gestion des heures
             if (dateHeure) {
-                //heure principale
+                //si heure principale ajoutée
                 if (dateHeure.valeur) {
-                    const [debut, fin] = dateHeure.valeur.split('-');
+                    const [debut, fin] = dateHeure.valeur.split('-') //séparation - 
                     if (debut && fin) {
-                        heuresQuery.push({ debut, fin });
+                        heuresQuery.push({ debut, fin }) //on ajoute dans le tab
                     }
                 }
-                //heures supplémentaires
+                //si heures supplémentaires ajoutées
                 if (dateHeure.plagesHoraires && dateHeure.plagesHoraires.length > 0) {
-                    heuresQuery.push(...dateHeure.plagesHoraires.filter(h => h.debut && h.fin));
+                    heuresQuery.push(...dateHeure.plagesHoraires.filter(h => h.debut && h.fin)) //ajoute dans le tab
                 }
             }
     }
     
-        
+        //c'est parti
         try {
-            const response = await fetch(`http://localhost:3000/api/recherche`, {
+            //on lance la recherche avec tous ces params
+            const response = await fetch(`http://localhost:3000/api/recherche`, { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    //liste des instruments
                     instrumentIds: instrumentsSelectionnes,
-                    //dates précises
+                    //si dates précises
                     dateDebut: dateDebutQuery, //mtn au format YYYY-MM-DD
                     dateFin: dateFinQuery,
                     heuresPrecisesPlages: heuresQuery,
-                    //périodes
-                    periodes : periodesData,
-                    //datesPrecises : datesPrecisesAjoutees 
+                    //si périodes
+                    periodes : periodesData, 
                   })
                 
             })
 
-            if (response.ok){
+            if (response.ok){ //si on a une réponse
             const data = await response.json()
-            console.log('Résultats de la recherche:', data)
+            console.log('Résultats de la recherche:', data) //debug
             //on va sur la page d'affichage des données
             navigate('/resultatsRecherche', { state: { previewResultats: data.previewResultats,
                 resultats: data.resultats, entetes : data.entetes} }) //preview de 20 résultats mais téléchargement de tous
 
+            //sinon erreurs
             }else {
               alert('Erreur lors de la recherche')
             } 
@@ -454,7 +468,7 @@ const renderCategoryTree = (categorie: any, depth: number) => {
             alert('Erreur lors de la recherche')
         }
     }
-
+    
     const listeInstruments = categoriesSelectionnees.length>0 ? instrumentsFiltres : instrumentsDisponibles
 
 
@@ -860,7 +874,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                 }
 
     //CAS DATES PRÉCISES
-    // ajouter une date précise (jour et/ou heure)
+    //ajouter une date précise (jour et/ou heure)
     const ajouterDatePrecise = (type: string) => {
         if (type === 'Jour(s)' && jourDejaAjoute) {
             return //ne rien faire si le jour est déjà ajouté
@@ -885,7 +899,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
         }
     }
 
-    // Supprimer une date précise
+    //supprimer une date précise
     const supprimerDatePrecise = (id: string) => {
         const dateASupprimer = datesPrecisesAjoutees.find(date => date.id === id)
         setDatesPrecisesAjoutees(datesPrecisesAjoutees.filter(date => date.id !== id))
@@ -897,7 +911,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
         }
     }
 
-    // Mettre à jour la valeur d'une date précise
+    //màj la valeur d'une date précise
     const updateDatePrecise = (id: string, valeur: string, plagesHoraires?: Array<{debut: string, fin: string}>) => {
         setDatesPrecisesAjoutees(prev => 
             prev.map(date =>
@@ -907,47 +921,47 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
         console.log("datesPrecisesAjoutees :", datesPrecisesAjoutees)
     }
 
-    // Ajouter une plage horaire pour dates précises
+    //ajouter une plage horaire pour dates précises
     const ajouterNvHeurePrecise = (dateID : string) => {
         setDatesPrecisesAjoutees(prev => 
             prev.map(date => {
                 if (date.id === dateID && date.type === 'Heure(s)') {
-                    const nouvellesPlages = [...(date.plagesHoraires || []), { debut: '', fin: '' }];
-                    return { ...date, plagesHoraires: nouvellesPlages };
+                    const nouvellesPlages = [...(date.plagesHoraires || []), { debut: '', fin: '' }]
+                    return { ...date, plagesHoraires: nouvellesPlages }
                 }
-                return date;
+                return date
             })
         )
     }
 
-    // Supprimer une plage horaire pour dates précises
+    //supprimer une plage horaire pour les dates précises
     const supprimerHeurePrecise = (dateId: string, heureId: number) => {
         setDatesPrecisesAjoutees(prev => 
             prev.map(date => {
                 if (date.id === dateId && date.type === 'Heure(s)') {
-                    const nouvellesPlages = (date.plagesHoraires || []).filter((_, index) => index !== heureId);
-                    return { ...date, plagesHoraires: nouvellesPlages };
+                    const nouvellesPlages = (date.plagesHoraires || []).filter((_, index) => index !== heureId)
+                    return { ...date, plagesHoraires: nouvellesPlages }
                 }
-                return date;
+                return date
             })
         )
     }
 
-    // Mettre à jour une plage horaire pour dates précises
+    //màj une plage horaire pour dates précises
     const updateHeurePrecise = (dateId: string, heureIndex: number, champ: 'debut' | 'fin', valeur: string) => {
         setDatesPrecisesAjoutees(prev => 
             prev.map(date => {
                 if (date.id === dateId && date.type === 'Heure(s)') {
-                    const nouvellesPlages = [...(date.plagesHoraires || [])];
-                    nouvellesPlages[heureIndex] = { ...nouvellesPlages[heureIndex], [champ]: valeur };
-                    return { ...date, plagesHoraires: nouvellesPlages };
+                    const nouvellesPlages = [...(date.plagesHoraires || [])]
+                    nouvellesPlages[heureIndex] = { ...nouvellesPlages[heureIndex], [champ]: valeur }
+                    return { ...date, plagesHoraires: nouvellesPlages }
                 }
-                return date;
+                return date
             })
         )
     }
 
-    // Réinitialiser tous les choix de dates précises
+    //réinitialiser tous les choix de dates précises
     const resetDatesPrecises = () => {
         setDatesPrecisesAjoutees([])
         setHeuresPrecisesPlages([])
@@ -958,12 +972,13 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
 
     return (
         <Box sx={{ flexGrow: 1 }}>
+            {/*barre navigation*/}
             <AppBar position="static" sx={{ bgcolor: "#0370B2" }}>
                 <Toolbar>
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                         RECHERCHER DES DONNÉES
                     </Typography>
-                    <Button color="inherit" onClick={() => navigate('/')}>Retour</Button>
+                    <Button color="inherit" onClick={() => navigate('/')}>Retour</Button> {/*retour menu*/}
                 </Toolbar>
             </AppBar>
 
@@ -1022,7 +1037,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                       />
                                   </Box>
 
-                                        {filtreActif && (
+                                        {filtreActif && ( //choix de filtrer par catégorie
                                             <>
                                                 <Divider sx={{ my: 1 }} />
                                                 <Typography variant="caption" sx={{ color: '#666', mb: 1, display: 'block' }}>
@@ -1043,7 +1058,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                             </>
                                         )}
                                     </Box>
-                                    
+                                
                                     {listeInstruments.length === 0 ? (
                                       messageErreur ? (
                                         <Typography color="error" sx={{ textAlign: 'center', py: 2 }}>
@@ -1061,13 +1076,13 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                   <FormControl component="fieldset" required sx={{ mb: 2 }}>
                                   <FormLabel component="legend">Sélectionnez un ou plusieurs instruments</FormLabel>
     
-                                  {/* Bouton Tout sélectionner */}
+                                  {/* Bouton Tout sélectionner instruments*/}
                                   {listeInstruments.length>=2 && (
                                   <Box sx={{ mb: 1, ml: -0.5 }}>
                                   <FormControlLabel
                                     control={
                                     <Checkbox 
-                                        checked={selectTout}
+                                        checked={selectTout} //booléen
                                         onChange={CocheTTselectionner}
                                         size="small"
                                         sx={{
@@ -1090,15 +1105,15 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                             {listeInstruments.map((item) => (
                                                 <FormControlLabel
-                                                    key={item.id_instrument}
+                                                    key={item.id_instrument} //sélection par ID
                                                     control={
                                                         <Checkbox
-                                                            checked={instrumentsSelectionnes.includes(item.id_instrument.toString())}
+                                                            checked={instrumentsSelectionnes.includes(item.id_instrument.toString())} //coversion string
                                                             onChange={() => InstrumentSelection(item.id_instrument)}
                                                             size="small"
                                                         />
                                                     }
-                                                    label={`${item.nom_outil || item.modele} - ${item.num_instrument || ''}`}
+                                                    label={`${item.nom_outil || item.modele} - ${item.num_instrument || ''}`} //affichage nom outil ou modèle si pas rempli + son numéro
                                                 />
                                             ))}
                                         </Box>
@@ -1112,14 +1127,14 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                             
 
 
-                            {/* Méthode de datation */}
+                            {/* choix de la méthode de datation */}
                             <Box key="date-box" sx={{ mb: 3, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
                                 <InputLabel>Veuillez choisir une méthode de datation :</InputLabel><br></br>
                                 
                                 <FormControlLabel
                                     control={
                                     <Checkbox 
-                                        checked={datesPrecises}
+                                        checked={datesPrecises} //booléen
                                         onChange={EnvoiDatesPrecises}
                                         size="small"
                                         sx={{
@@ -1138,7 +1153,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                     <FormControlLabel
                                     control={ 
                                       <Checkbox
-                                        checked={periodesTemp}
+                                        checked={periodesTemp} //booléen
                                         onChange={EnvoiPeriodes}
                                         size="small"
                                         sx={{
@@ -1163,103 +1178,104 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                             <Divider sx={{ my: 2 }} />
 
                                     <InputLabel>Ajoutez les informations utiles à la période que vous recherchez :</InputLabel><br></br>
-                                                {/* Boutons pour ajouter des périodes */}
-                                    <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}>
+                                     
+                                        {/* Boutons pour ajouter des périodes */}
+                                        <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', gap: 1 }}>
 
-                                    <Button
-                                        variant="contained"
-                                        id="BoutonJourP"
-                                        startIcon={<AddIcon />}
-                                        onClick={() => ajouterPeriode('Jour(s)')}
-                                        disabled={joursDejaAjoutes}
-                                            sx={{
-                                                bgcolor: joursDejaAjoutes ? '#CCCCCC' : '#0370B2',
-                                                '&:hover': { bgcolor: joursDejaAjoutes ? '#CCCCCC' : '#00517C' },
-                                                fontSize: '0.75rem',
-                                                py: 0.5
-                                            }}
-                                    >
-                                        Jour(s)
-                                    </Button>
+                                        <Button
+                                            variant="contained"
+                                            id="BoutonJourP"
+                                            startIcon={<AddIcon />} //icône +
+                                            onClick={() => ajouterPeriode('Jour(s)')}
+                                            disabled={joursDejaAjoutes} //peut plus recliquer 
+                                                sx={{
+                                                    bgcolor: joursDejaAjoutes ? '#CCCCCC' : '#0370B2',
+                                                    '&:hover': { bgcolor: joursDejaAjoutes ? '#CCCCCC' : '#00517C' }, //grisé si déjà cliqué
+                                                    fontSize: '0.75rem',
+                                                    py: 0.5
+                                                }}
+                                        >
+                                            Jour(s)
+                                        </Button>
 
-                                    <Button
-                                        variant="contained"
-                                        id="BoutonHeure"
-                                        startIcon={<AddIcon />}
-                                        onClick={() => ajouterPeriode('Heure(s)')}
-                                        disabled={heureDejaAjoutee}
-                                            sx={{
-                                                bgcolor: heureDejaAjoutee ? '#CCCCCC' : '#0370B2',
-                                                '&:hover': { bgcolor: heureDejaAjoutee ? '#CCCCCC' : '#00517C' },
-                                                fontSize: '0.75rem',
-                                                py: 0.5
-                                            }}
-                                    >
-                                        Heure(s)
-                                    </Button>
+                                        <Button
+                                            variant="contained"
+                                            id="BoutonHeure"
+                                            startIcon={<AddIcon />} //icône +
+                                            onClick={() => ajouterPeriode('Heure(s)')}
+                                            disabled={heureDejaAjoutee} //peut plus recliquer 
+                                                sx={{
+                                                    bgcolor: heureDejaAjoutee ? '#CCCCCC' : '#0370B2',
+                                                    '&:hover': { bgcolor: heureDejaAjoutee ? '#CCCCCC' : '#00517C' }, //grisé si déjà cliqué
+                                                    fontSize: '0.75rem',
+                                                    py: 0.5
+                                                }}
+                                        >
+                                            Heure(s)
+                                        </Button>
 
-                                    
-                                    <Button
-                                        variant="contained"
-                                        id="BoutonMois"
-                                        startIcon={<AddIcon />}
-                                        onClick={() => ajouterPeriode('Mois')}
-                                        disabled={moisDejaAjoute}
-                                            sx={{
-                                                bgcolor: moisDejaAjoute ? '#CCCCCC' : '#0370B2',
-                                                '&:hover': { bgcolor: moisDejaAjoute ? '#CCCCCC' : '#00517C' },
-                                                fontSize: '0.75rem',
-                                                py: 0.5
-                                            }}
-                                    >
-                                        Mois
-                                    </Button>
-                                    <Button
-                                        variant="contained"
-                                        id="BoutonAnnee"
-                                        startIcon={<AddIcon />}
-                                        onClick={() => ajouterPeriode('Année(s)')}
-                                        disabled={anneeDejaAjoutee}
-                                            sx={{
-                                                bgcolor: anneeDejaAjoutee ? '#CCCCCC' : '#0370B2',
-                                                '&:hover': { bgcolor: anneeDejaAjoutee ? '#CCCCCC' : '#00517C' },
-                                                fontSize: '0.75rem',
-                                                py: 0.5
-                                            }}
                                         
-                                    >
-                                        Année(s)
-                                    </Button>
-                                </Stack>
-
-                                {/* Liste des périodes ajoutées */}
-                                {periodesAjoutees.length > 0 && (
-                                    <Stack spacing={2}>
-                                        <Typography variant="subtitle2" sx={{ color: '#666' }}>
-                                            Périodes sélectionnées :
-                                        </Typography>
-                                        {periodesAjoutees.map((periode) => (
-                                            <Paper key={periode.id} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-                                                <Stack spacing={2}>
-                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                        <Typography variant="subtitle2" sx={{ color: '#0370B2' }}>
-                                                            {periode.type}
-                                                        </Typography>
-                                                                {/*pas de bouton supprimer pour Jour(s), Mois et Année(s) car strict minimum pr recuperer les données*/}
-                                                                {periode.type !=='Jour(s)' && periode.type !== 'Mois' && periode.type !== 'Année(s)' && (
-                                                                    <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => supprimerPeriode(periode.id)}>
-                                                                    Supprimer
-                                                                </Button>
-                                                                )}
-                                                    </Box>
-                                                    {renderPeriodeInput(periode)}
-                                                </Stack>
-                                            </Paper>
-                                        ))}
+                                        <Button
+                                            variant="contained"
+                                            id="BoutonMois"
+                                            startIcon={<AddIcon />} //icône +
+                                            onClick={() => ajouterPeriode('Mois')}
+                                            disabled={moisDejaAjoute}//peut plus recliquer 
+                                                sx={{
+                                                    bgcolor: moisDejaAjoute ? '#CCCCCC' : '#0370B2',
+                                                    '&:hover': { bgcolor: moisDejaAjoute ? '#CCCCCC' : '#00517C' }, //grisé si déjà cliqué
+                                                    fontSize: '0.75rem',
+                                                    py: 0.5
+                                                }}
+                                        >
+                                            Mois
+                                        </Button>
+                                        <Button
+                                            variant="contained"
+                                            id="BoutonAnnee"
+                                            startIcon={<AddIcon />} //icône +
+                                            onClick={() => ajouterPeriode('Année(s)')}
+                                            disabled={anneeDejaAjoutee} //peut plus recliquer 
+                                                sx={{
+                                                    bgcolor: anneeDejaAjoutee ? '#CCCCCC' : '#0370B2',
+                                                    '&:hover': { bgcolor: anneeDejaAjoutee ? '#CCCCCC' : '#00517C' }, //grisé si déjà cliqué
+                                                    fontSize: '0.75rem',
+                                                    py: 0.5
+                                                }}
+                                            
+                                        >
+                                            Année(s)
+                                        </Button>
                                     </Stack>
-                                )}
-                            </>
-                        )}
+
+                                    {/* Liste des périodes ajoutées */}
+                                    {periodesAjoutees.length > 0 && (
+                                        <Stack spacing={2}>
+                                            <Typography variant="subtitle2" sx={{ color: '#666' }}>
+                                                Périodes sélectionnées :
+                                            </Typography>
+                                            {periodesAjoutees.map((periode) => (
+                                                <Paper key={periode.id} sx={{ p: 2, bgcolor: '#f5f5f5' }}>
+                                                    <Stack spacing={2}>
+                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                            <Typography variant="subtitle2" sx={{ color: '#0370B2' }}>
+                                                                {periode.type}
+                                                            </Typography>
+                                                                    {/*pas de bouton supprimer pour Jour(s), Mois et Année(s) car strict minimum pr recuperer les données*/}
+                                                                    {periode.type !=='Jour(s)' && periode.type !== 'Mois' && periode.type !== 'Année(s)' && (
+                                                                        <Button size="small" color="error" startIcon={<DeleteIcon />} onClick={() => supprimerPeriode(periode.id)}>
+                                                                        Supprimer
+                                                                    </Button>
+                                                                    )}
+                                                        </Box>
+                                                        {renderPeriodeInput(periode)}
+                                                    </Stack>
+                                                </Paper>
+                                            ))}
+                                        </Stack>
+                                    )}
+                                </>
+                            )}
                         
                         </Box>
 
@@ -1272,8 +1288,8 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                         <Button 
                                         size="small" 
                                         color="error" 
-                                        startIcon={<DeleteIcon />}
-                                        onClick={resetDatesPrecises}
+                                        startIcon={<DeleteIcon />} //icône suppression
+                                        onClick={resetDatesPrecises} //réinitialiser les choix déjà faits
                                         sx={{ fontSize: '0.7rem' }}
                                     >
                                         Tout supprimer
@@ -1285,12 +1301,12 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                         <Button
                                             variant="contained"
                                             id="BoutonJourD"
-                                            startIcon={<AddIcon />}
+                                            startIcon={<AddIcon />} //icône +
                                             onClick={() => ajouterDatePrecise('Jour(s)')}
-                                            disabled={jourDejaAjoute}
+                                            disabled={jourDejaAjoute} //peut plus recliquer après
                                             sx={{
                                                 bgcolor: jourDejaAjoute ? '#CCCCCC' : '#0370B2',
-                                                '&:hover': { bgcolor: jourDejaAjoute ? '#CCCCCC' : '#00517C' },
+                                                '&:hover': { bgcolor: jourDejaAjoute ? '#CCCCCC' : '#00517C' }, //bouton grisé si déjà cliqué
                                                 fontSize: '0.75rem',
                                                 py: 0.5
                                             }}
@@ -1301,14 +1317,14 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                         <Button
                                             variant="contained"
                                             id="BoutonHeureD"
-                                            startIcon={<AddIcon />}
+                                            startIcon={<AddIcon />} //icône +
                                             onClick={() => {
                                                 ajouterDatePrecise('Heure(s)')  
                                             }}
-                                            disabled={heurePreciseDejaAjoutee}
+                                            disabled={heurePreciseDejaAjoutee} //peut plus recliquer après
                                             sx={{
                                                 bgcolor: heurePreciseDejaAjoutee ? '#CCCCCC' : '#0370B2',
-                                                '&:hover': { bgcolor: heurePreciseDejaAjoutee ? '#CCCCCC' : '#00517C' },
+                                                '&:hover': { bgcolor: heurePreciseDejaAjoutee ? '#CCCCCC' : '#00517C' }, //bouton grisé si déjà cliqué
                                                 fontSize: '0.75rem',
                                                 py: 0.5
                                             }}
@@ -1338,19 +1354,20 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                                 )}
                                                                 
                                                             </Box>
+                                                            {/*si clique bouton 'Heure(s)'*/}
                                                             {date.type === 'Heure(s)' && (
 
-                                                                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                                                <LocalizationProvider dateAdapter={AdapterDayjs}> 
                                                                     <Box sx = {{width:'100%'}}>
                                                                     <Stack direction="row" spacing={2} alignItems="center">
                                                                         <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}></Typography>
-                                                                            <DesktopTimePicker
+                                                                            <DesktopTimePicker //beau visuel choix d'heure
                                                                             label="Heure de début"
                                                                                 value={(() => {
                                                                                     if (!date.valeur || date.valeur==='') return null
                                                                                     const debut = date.valeur.split('-')[0] //on récupère la 1ère heure
                                                                                     if (!debut || debut === '') return null //vérification heure début
-                                                                                    const dateConv = dayjs(debut, 'HH:mm')
+                                                                                    const dateConv = dayjs(debut, 'HH:mm') //conversion
                                                                                     return dateConv.isValid() ? dateConv : null
                                                                                 })()}
                                                                                 onChange={(newValue) => {
@@ -1361,8 +1378,8 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                                                     }
                                                                                 }}
                                                                                 sx={{ flex: 1 }}
-                                                                                format="HH:mm"
-                                                                                ampm={false}  // pour utiliser le format 24h
+                                                                                format="HH:mm" //force le format
+                                                                                ampm={false}  //pour utiliser le format 24h
                                                                             />
                                                                             <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}></Typography>
                                                                             <DesktopTimePicker
@@ -1387,22 +1404,22 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                                             />
                                                                         </Stack>
 
-                                                                    {/* Plages horaires supplémentaires */}
+                                                                    {/* plages horaires supplémentaires */}
                                                                     {(date.plagesHoraires && date.plagesHoraires.length > 0) && (
                                                                         <>
                                                                     <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 2, mb: 1 }}>
                                                                         Plages horaires supplémentaires :
                                                                     </Typography>
 
-                                                                    {/* Affichage des plages horaires supplémentaires */}
+                                                                    {/* affichage des plages horaires supplémentaires */}
                                                                     {date.plagesHoraires.map((heure, index) => (
                                                                         <Stack key={index} direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                                                                            <DesktopTimePicker
+                                                                            <DesktopTimePicker //beau visuel choix d'heures
                                                                                 label="Heure début"
                                                                                 value={heure.debut ? dayjs(heure.debut, 'HH:mm') : null}
                                                                                 onChange={(newValue) => {
                                                                                     if (newValue && newValue.isValid()) {
-                                                                                        updateHeurePrecise(date.id, index, 'debut', newValue.format('HH:mm'));
+                                                                                        updateHeurePrecise(date.id, index, 'debut', newValue.format('HH:mm'))
                                                                                     }
                                                                                 }}
                                                                                 
@@ -1415,13 +1432,14 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                                                 value={heure.fin ? dayjs(heure.fin, 'HH:mm') : null}
                                                                                 onChange={(newValue) => {
                                                                                     if (newValue && newValue.isValid()) {
-                                                                                        updateHeurePrecise(date.id, index, 'fin', newValue.format('HH:mm'));
+                                                                                        updateHeurePrecise(date.id, index, 'fin', newValue.format('HH:mm'))
                                                                                     }
                                                                                 }}
                                                                                 
                                                                                 format="HH:mm"
                                                                                 ampm={false}
                                                                             />
+                                                                            {/*si on veut supprimer l'heure*/}
                                                                             <Button
                                                                                 size="small"
                                                                                 color="error"
@@ -1447,52 +1465,52 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                                                 </Box>
                                                             </LocalizationProvider>
                                                         )}
-
+                                                            {/*si on clique sur le bouton 'Jour(s)'*/}
                                                             {date.type === 'Jour(s)' && (
-                                                                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                                                                <LocalizationProvider dateAdapter={AdapterDayjs}> {/*récupérer la date actuelle*/}
                                                                     <Stack direction="row" spacing={2}>
-                                                                        <DatePicker
+                                                                        <DatePicker //beau format visuel
                                                                             label="Date de début"
                                                                             value={(() => {
-                                                                                if (!date.valeur) return null;
-                                                                                const [debut] = date.valeur.split('|'); //choix de date récupéré ss forme DD-MM-YYYY|DD-MM-YYYY
-                                                                                const datedebut = debut ? dayjs(debut, 'DD-MM-YYYY') : null;
-                                                                                return datedebut && datedebut.isValid() ? datedebut : null; //si datedebut existe +valide on affiche sinon null
+                                                                                if (!date.valeur) return null //si aucune date de mise, rien
+                                                                                const [debut] = date.valeur.split('|') //choix de date récupéré ss forme DD-MM-YYYY|DD-MM-YYYY
+                                                                                const datedebut = debut ? dayjs(debut, 'DD-MM-YYYY') : null
+                                                                                return datedebut && datedebut.isValid() ? datedebut : null //si datedebut existe +valide on affiche sinon null
 
                                                                             })()}
                                                                             onChange={(newValue) => {
                                                                                 if (newValue && newValue.isValid()) {
-                                                                                    const fin = date.valeur?.split('|')[1] || ''; //split les 2 dates et extrait la date de fin : si pas de date de fin, ''
-                                                                                    const nouvelleValeur = `${newValue.format('DD-MM-YYYY')}${fin ? `|${fin}` : ''}`; //formate la date choisie (deb|fin) et si pas de date de fin, rien
-                                                                                    updateDatePrecise(date.id, nouvelleValeur);
+                                                                                    const fin = date.valeur?.split('|')[1] || '' //split les 2 dates et extrait la date de fin : si pas de date de fin, ''
+                                                                                    const nouvelleValeur = `${newValue.format('DD-MM-YYYY')}${fin ? `|${fin}` : ''}` //formate la date choisie (deb|fin) et si pas de date de fin, rien
+                                                                                    updateDatePrecise(date.id, nouvelleValeur)
                                                                                 }
                                                                             }}
                                                                             slotProps={{ textField: { size: 'small', fullWidth: true } }} //affichage pas trop large
                                                                             sx={{ width: '100%' }}
-                                                                            format="DD/MM/YYYY"
+                                                                            format="DD/MM/YYYY" //force le format
                                                                             minDate= {dayjs('2020')} //test choix année commence à 2020 
                                                                             maxDate = {dayjs()} //bloque à date du jour
                                                                         />
-                                                                        <DatePicker
+                                                                        <DatePicker 
                                                                             label="Date de fin"
                                                                             value={(() => {
-                                                                                if (!date.valeur) return null;
-                                                                                const [, fin] = date.valeur.split('|'); //choix de date récupéré ss forme DD-MM-YYYY|DD-MM-YYYY
-                                                                                const datefin = fin ? dayjs(fin, 'DD-MM-YYYY') : null;
-                                                                                return datefin && datefin.isValid() ? datefin : null; //si datefin existe +valide on affiche sinon null
+                                                                                if (!date.valeur) return null
+                                                                                const [, fin] = date.valeur.split('|') //choix de date récupéré ss forme DD-MM-YYYY|DD-MM-YYYY
+                                                                                const datefin = fin ? dayjs(fin, 'DD-MM-YYYY') : null
+                                                                                return datefin && datefin.isValid() ? datefin : null //si datefin existe +valide on affiche sinon null
 
                                                                             })()}
                                                                             onChange={(newValue) => {
                                                                                 if (newValue && newValue.isValid()) {
-                                                                                    const debut = date.valeur?.split('|')[0] || '';
-                                                                                    const nouvelleValeur = `${debut}${debut ? '|' : ''}${newValue.format('DD-MM-YYYY')}`;
-                                                                                    updateDatePrecise(date.id, nouvelleValeur);
+                                                                                    const debut = date.valeur?.split('|')[0] || ''
+                                                                                    const nouvelleValeur = `${debut}${debut ? '|' : ''}${newValue.format('DD-MM-YYYY')}`
+                                                                                    updateDatePrecise(date.id, nouvelleValeur)
                                                                                 }
                                                                             }}
                                                                             slotProps={{ textField: { size: 'small', fullWidth: true } }}
-                                                                            format="DD/MM/YYYY"
-                                                                            minDate= {dayjs('2020')}
-                                                                            maxDate = {dayjs()}
+                                                                            format="DD/MM/YYYY" //forcer le format
+                                                                            minDate= {dayjs('2020')} //à partir de 2020
+                                                                            maxDate = {dayjs()} //jusqu'à année actuelle
                                                                         />
                                                                     </Stack>
                                                                 </LocalizationProvider>
@@ -1505,11 +1523,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                         )}
                                     </>
                                 )}
-                                         
-                                        
-
-                                        
-
+                                    
                             <Stack direction="row" spacing={2} justifyContent="center">
 
                             <Button
