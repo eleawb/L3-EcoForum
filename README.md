@@ -26,7 +26,7 @@ avant tout, créez vous un fichier .env dans /Base_de_donnees et ajoutez :
 DB_USER=postgres
 DB_PASSWORD=mdp
 DB_HOST=localhost
-DB_NAME=EcoforumV4
+DB_NAME=EcoForumV4
 DB_PORT=5432
 
 et modifiez postgres avec votre nom d'utilisateur sur pgAdmin, et mdp votre mdp pgAdmin
