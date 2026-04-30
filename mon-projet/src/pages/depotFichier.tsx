@@ -30,9 +30,10 @@ Definition des etats
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 */ 
 
-  const [selectedInstrument, setSelectedInstrument] = useState<string>('');//Instrument selectione
-  const [numInstrument, setNumInstrument] = useState<string>('');
-  const [instruments, setInstrumentsDisponibles] = useState([]);
+  const [selectedInstrumentId, setSelectedInstrumentId] = useState<number | null>(null);//ID de l instrument
+  const [selectedInstrument, setSelectedInstrument] = useState<string>(''); // nom_outil
+  const [numInstrument, setNumInstrument] = useState<string>(''); //num_instrument
+  const [instruments, setInstrumentsDisponibles] = useState([]); //liste dinstruments disponibles sur la BDD
   const [showAdditionalInputs, setShowAdditionalInputs] = useState<boolean>(false);
   const [utilisateur, setUtilisateur] = useState<string>('');
   const [selectedResponsable,setSelectedResponsable] = useState<string>('');
@@ -87,16 +88,15 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
   //Gestion du changement d instrument
   const InstrumentChange = (event: SelectChangeEvent) => {
-    const selectedValue = event.target.value;
-    setSelectedInstrument(selectedValue);
-
-    //Detection du numeroInstrument
-    const instrument = instruments.find(i => i.nom_outil === selectedValue);
-    if (instrument) {
-      setNumInstrument(instrument.num_instrument?.toString() || '');   
-  }
+    const selectedId = parseInt(event.target.value);
+    setSelectedInstrumentId(selectedId);
+  
+      const instrument = instruments.find(i => i.id_instrument === selectedId);
+      if (instrument) {
+        setSelectedInstrument(instrument.nom_outil || ''); // Store nom_outil
+        setNumInstrument(instrument.num_instrument?.toString() || '');   
+    }
   };
-
   const FileUpload = () => {
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
@@ -226,32 +226,34 @@ return(
               <Stack spacing={3}>
 
               <FormControl fullWidth required>
-                  <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
-                    <Select
-                      value={selectedInstrument} 
-                      onChange={InstrumentChange}
-                      label="Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier"
-                      >
-                      {instruments.map((instrument) => (
-                      <MenuItem 
-                      key={instrument.id_instrument} 
-                      value={instrument.nom_outil}
-                      >
-                      {instrument.nom_outil}
-                      </MenuItem>
-                      ))}
-                    </Select>
-              </FormControl>
+              <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
+              <Select
+                value={selectedInstrumentId || ''} 
+                onChange={InstrumentChange}
+                label="Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier"
+              >
+                {instruments.map((instrument) => (
+                  <MenuItem 
+                    key={instrument.id_instrument} 
+                    value={instrument.id_instrument}
+                  >
+                    {instrument.nom_outil} - {instrument.num_instrument}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
               <TextField
-                label="Numero de l-instrument"
-                variant="outlined"
-                fullWidth
-                required
-                value={numInstrument}
-                onChange={(e) => setNumInstrument(e.target.value)}
-                placeholder="Entrez le numero de l-instrument"
-              />
+              label="Numero de l'instrument"
+              variant="outlined"
+              fullWidth
+              required
+              value={numInstrument}
+              disabled // pas editable par securite 
+              InputProps={{
+                readOnly: true,
+              }}
+            />
 
               <FormControl fullWidth required>
                   <InputLabel>Type source</InputLabel>
