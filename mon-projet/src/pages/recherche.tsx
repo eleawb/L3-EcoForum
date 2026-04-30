@@ -471,32 +471,33 @@ const renderCategoryTree = (categorie: any, depth: number) => {
     
     const listeInstruments = categoriesSelectionnees.length>0 ? instrumentsFiltres : instrumentsDisponibles
 
-
+/*
 //datation
-// gérer la sélection des jours
+//gérer la sélection des jours
 const handleJourChange = (jour : string) => {
   if (joursSemaine.includes(jour)) {
     setJoursSemaine(joursSemaine.filter(j => j !== jour))
 } else {
     setJoursSemaine([...joursSemaine, jour])
 }
-}
+}*/
 
-// Fonction pour EnvoiPeriodes
+//gestion affichage selon choix de la datation
+//fonction pour EnvoiPeriodes
 const EnvoiPeriodes = () => {
     if (!periodesTemp) {
         setPeriodesTemp(true)
-        setDatesPrecises(false) // Désactiver dates précises si période est cochée
+        setDatesPrecises(false) //désactive dates précises si période est cochée
     } else {
         setPeriodesTemp(false)
     }
 }
 
-// Fonction pour EnvoiDatesPrecises
+//fonction pour EnvoiDatesPrecises
 const EnvoiDatesPrecises = () => {
     if (!datesPrecises) {
         setDatesPrecises(true)
-        setPeriodesTemp(false) // Désactiver période si dates précises est cochée
+        setPeriodesTemp(false) //désactive période si dates précises est cochée
     } else {
         setDatesPrecises(false)
     }
@@ -509,13 +510,13 @@ const ajouterPeriode = (type: string) => {
         return // ne rien faire si le jour est déjà ajouté
     }
     if (type === 'Mois' && moisDejaAjoute){
-        return
+        return //idem pour mois
     }
     if (type === 'Heure(s)' && heureDejaAjoutee){
-        return
+        return //idem pr heures
     }
     if (type === 'Année(s)' && anneeDejaAjoutee){
-        return
+        return //idem pr années
     }
     
     const nouvellePeriode = {
@@ -539,7 +540,7 @@ const ajouterPeriode = (type: string) => {
     }
 }
 
-// Fonction pour supprimer une période
+//fonction pour supprimer une période
 const supprimerPeriode = (id: string) => {
     const PeriodesASupprimer = periodesAjoutees.find(periode => periode.id === id)
     setPeriodesAjoutees(periodesAjoutees.filter(periode => periode.id !== id))
@@ -557,9 +558,9 @@ const supprimerPeriode = (id: string) => {
         setAnneeDejaAjoutee(false)
     }
 
-};
+}
 
-// Fonction pour mettre à jour la valeur d'une période
+//fonction pour maj la valeur d'une période
 const updatePeriodeValeur = (id: string, valeur: string) => {
     setPeriodesAjoutees(periodesAjoutees.map(periode => 
         periode.id === id ? {...periode, valeur: valeur} : periode
@@ -572,23 +573,23 @@ const ajouterNvHeure = () => {
   id: `${Date.now()}-${Math.random()}`,
         debut: '',
         fin: ''
-    };
+    }
     setHeuresPlages([...heuresPlages, nouvelleHeure])
 }
 
-// Fonction pour supprimer une plage horaire
+//fonction pour supprimer une plage horaire
 const supprimerHeure = (id: string) => {
   setHeuresPlages(heuresPlages.filter(heure => heure.id !== id))
 }
 
-// Fonction pour mettre à jour une plage horaire
+//fonction pour màj une plage horaire
 const updateHeure = (id: string, champ: 'debut' | 'fin', valeur: string) => {
   setHeuresPlages(heuresPlages.map(heure =>
       heure.id === id ? { ...heure, [champ]: valeur } : heure
   ))
 }
 
-// Générer la liste des années de 2020 à année actuelle
+//générer la liste des années de 2020 à année actuelle (mis par défaut pr tester)
 useEffect(() => {
   const anneeActuelle = new Date().getFullYear()
   const annees = []
@@ -598,7 +599,7 @@ useEffect(() => {
   setAnneesDisponibles(annees)
 }, [])
 
-// Gestion de la sélection des années
+//gestion de la sélection des années
 const handleAnneeChange = (annee: string) => {
   setAnneesSelectionnees(prev => {
       if (prev.includes(annee)) {
@@ -618,7 +619,7 @@ const selectToutAnnees = () => {
   }
 }
 
-// Rendu conditionnel pour chaque type de période
+//rendu conditionnel pour chaque type de période
 const renderPeriodeInput = (periode: {id: string, type: string, valeur: string}) => {
     switch(periode.type) {
         case 'Heure(s)':
@@ -667,13 +668,13 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                     }
                                 }}
 
-                                format="HH:mm"
+                                format="HH:mm" //force format
                                 ampm={false}
                             />
                         </Stack>
                         </LocalizationProvider>
               
-              {/* Plages horaires multiples */}
+              {/* Plages horaires multiples (similaire à datation précise faite avant mais située après) */}
               <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: 2, mb: 1 }}>
                   Plages horaires supplémentaires :
               </Typography>
@@ -716,10 +717,10 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
           </Box>
       )
         case 'Jour(s)':
-            // Récupérer les jours actuels depuis periode.valeur
+            //récupérer les jours actuels depuis periode.valeur
             const joursActuels = periode.valeur ? periode.valeur.split(',').filter(j => j !== '') : []
             const tousJoursSelectionnes = joursActuels.length === 7
-            // Fonction pour sélectionner tous les jours
+            //fonction pour sélectionner tous les jours
             const selectTousJours = () => {
               if (tousJoursSelectionnes) {
                 updatePeriodeValeur(periode.id, '')
@@ -731,6 +732,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
             return (
                 <Stack direction="row" spacing={2} alignItems="center">
                   <FormControlLabel control={
+                    //bouton tt sélectionner - jours
                     <Checkbox checked={tousJoursSelectionnes} onChange={selectTousJours}/>}
                     label={
                       <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
@@ -739,6 +741,7 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                       }
                       />
                     <FormGroup row>
+                        {/*checbox pour chaque jour*/}
                         {['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'].map(jour => (
                             <FormControlLabel
                                 key={jour}
@@ -746,19 +749,19 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                     <Checkbox
                                         checked={periode.valeur.split(',').includes(jour)}
                                         onChange={(e) => {
-                                            const joursActuels = periode.valeur ? periode.valeur.split(',') : [];
-                                            let nouveauxJours;
+                                            const joursActuels = periode.valeur ? periode.valeur.split(',') : []
+                                            let nouveauxJours
                                             if (e.target.checked) {
-                                                nouveauxJours = [...joursActuels, jour];
+                                                nouveauxJours = [...joursActuels, jour]
                                             } else {
-                                                nouveauxJours = joursActuels.filter(j => j !== jour);
+                                                nouveauxJours = joursActuels.filter(j => j !== jour)
                                             }
-                                            updatePeriodeValeur(periode.id, nouveauxJours.join(','));
+                                            updatePeriodeValeur(periode.id, nouveauxJours.join(','))
                                         }}
                                         size="small"
                                     />
                                 }
-                                label={jour.charAt(0).toUpperCase() + jour.slice(1)}
+                                label={jour.charAt(0).toUpperCase() + jour.slice(1)} //majuscule sur la 1ere lettre
                             />
                         ))}
                     </FormGroup>
@@ -766,28 +769,30 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
             )
         
         case 'Mois':
-            // Récupérer les mois actuels depuis periode.valeur
+            //récupérer les mois actuels depuis periode.valeur
             const moisActuels = periode.valeur ? periode.valeur.split(',').filter(j => j !== '') : []
             const tousMoisSelectionnes = moisActuels.length === 12
-            // Fonction pour sélectionner tous les mois
+            //fonction pour sélectionner tous les mois
             const selectTousMois = () => {
               if (tousMoisSelectionnes) {
                 updatePeriodeValeur(periode.id, '')
             } else {
                 const tousLesMois = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
-                updatePeriodeValeur(periode.id, tousLesMois.join(','))
+                updatePeriodeValeur(periode.id, tousLesMois.join(',')) //mixe tout avec , entre chacun
             }
         }
             return (
                 <Stack direction="row" spacing={2} alignItems="center">
                   <FormControlLabel control={
                     <Checkbox checked={tousMoisSelectionnes} onChange={selectTousMois}/>}
+                    //bouton tout sélectionner - mois
                     label={
                       <Typography variant="caption" sx={{ color: '#666', fontSize: '0.75rem' }}>
                         Tout sélectionner
                       </Typography>
                       }
                       />
+                      {/*checkbox pour chaque mois*/}
                     <FormGroup row>
                         {['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'].map(mois => (
                             <FormControlLabel
@@ -796,19 +801,19 @@ const renderPeriodeInput = (periode: {id: string, type: string, valeur: string})
                                     <Checkbox
                                         checked={periode.valeur.split(',').includes(mois)}
                                         onChange={(e) => {
-                                            const moisActuels = periode.valeur ? periode.valeur.split(',') : [];
-                                            let nouveauxMois;
+                                            const moisActuels = periode.valeur ? periode.valeur.split(',') : []
+                                            let nouveauxMois
                                             if (e.target.checked) {
-                                              nouveauxMois = [...moisActuels, mois];
+                                              nouveauxMois = [...moisActuels, mois]
                                             } else {
-                                                nouveauxMois = moisActuels.filter(j => j !== mois);
+                                                nouveauxMois = moisActuels.filter(j => j !== mois)
                                             }
-                                            updatePeriodeValeur(periode.id, nouveauxMois.join(','));
+                                            updatePeriodeValeur(periode.id, nouveauxMois.join(','))
                                         }}
                                         size="small"
                                     />
                                 }
-                                label={mois.charAt(0).toUpperCase() + mois.slice(1)}
+                                label={mois.charAt(0).toUpperCase() + mois.slice(1)} //mettre une majuscule a la 1ere lettre
                             />
                         ))}
                     </FormGroup>
