@@ -39,10 +39,10 @@ function DepotFichier(){
     const [dateImport, setDateImport] = useState<string>('');
     const [dateCueilli, setDateCueilli] = useState<string>('');
     const [typeSource, setTypeSource] = useState<string>('');
-    const [instruments, setInstrumentsDisponibles] = useState([]);
+    const [instruments, setInstrumentsDisponibles] = useState<any[]>([]);
     const [numInstrument, setNumInstrument] = useState<string>('');
     const [modele, setModele] = useState<string>('');
-    const [responsables, setResponsablesDisponibles] = useState([]);
+    const [responsables, setResponsablesDisponibles] = useState<any[]>([]);
     const [isNewResponsable, setIsNewResponsable] = useState<boolean>(false);//Check si le repssable fichier fut cree pour cet ajout
 
     const isFormComplete = selectedInstrument !== '';
@@ -216,14 +216,14 @@ const generateJSONFile = () => {
     }
 };
 
-    const InstrumentChange = (event: SelectChangeEvent) => {
+    const InstrumentChange = (event: SelectChangeEvent<string>) => {
     const selectedValue = event.target.value;
     setSelectedInstrument(selectedValue);
     
     //Auto completion du numero de serie quand l-instrument changes
     autoFillSerialNumber(selectedValue);
 };
-  const ResponsableChange = (event: SelectChangeEvent) => {
+  const ResponsableChange = (event: SelectChangeEvent<string>) => {
     const selectedValue = event.target.value;
     setSelectedResponsable(selectedValue);
     setIsNewResponsable(false);//Remet le flag a false quand on prend un responsable autre que celui nouvellement cree
@@ -295,7 +295,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
 
 
       const autoFillInstrumentFromFile = (fileName: string) => {
-    let detectedInstrument = null;
+    let detectedInstrument : string | null = null;
     
     if (fileName.includes('K-') || fileName.includes('K-A3')) {
         detectedInstrument = 'KUNAK';
@@ -434,7 +434,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
       console.log('Numéro de série:', numSerie);
       console.log('Extension:', extension);
       console.log('Date Import:',dateImport);
-      console.log('Date Cueilli:', dateCueilli);
+      console.log('Date de cueillie:', dateCueilli);
       console.log('Type source:', typeSource);
       
       alert(`Fichier "${selectedFile.name}" prêt à être uploadé`);
@@ -504,7 +504,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                     <FormControl fullWidth required>
                         <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
                         <Select
-                            value={selectedInstrument} 
+                            value={selectedInstrument || ''} 
                             onChange={InstrumentChange}
                             label="Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier"
                         >
@@ -526,7 +526,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                       required
                       value={utilisateur}
                       onChange={(e) => setUtilisateur(e.target.value)}
-                      placeholder="Qui veut deposer le fichier"
+                      placeholder="Qui veut déposer le fichier"
                     />
 
                     <FormControl fullWidth required>
@@ -552,13 +552,13 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                     onClick={(e) => setShowCreationRespInputs(true)}
                     sx={{ minWidth: '100px', height: '56px' }}
                     >
-                    Creer nouveau responsable fichier  
+                    Créer nouveau responsable fichier  
                     </Button>
                     
                    {showCreationRespInputs &&(
                     <>
                    <TextField
-                      label="nom"
+                      label="Nom"
                       variant="outlined"
                       fullWidth
                       required
@@ -567,13 +567,13 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                       placeholder="Entrez votre nom"
                     />
                     <TextField
-                      label="Prenom"
+                      label="Prénom"
                       variant="outlined"
                       fullWidth
                       required
                       value={prenom}
                       onChange={(e) => setPrenom(e.target.value)}
-                      placeholder="Entrez votre prenom"
+                      placeholder="Entrez votre prénom"
                     />
                     <TextField
                       label="Mail"
@@ -597,30 +597,30 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                     )}
                     
                     <TextField
-                          label="Numero de serie"
+                          label="Numéro de série"
                           variant="outlined"
                           fullWidth
                           required
                           value={numSerie}
                           onChange={(e) => setNumSerie(e.target.value)}
-                          placeholder="Entrez le numero de serie"
+                          placeholder="Entrez le numéro de série"
                       />
                   
                     <Stack direction="row" spacing={2} alignItems="center">
                       <TextField
-                        label="Format(extension)"
+                        label="Format (extension)"
                         variant="outlined"
                         fullWidth
                         required
                         value={extension}
                         onChange={(e) => setExtension(e.target.value)}
-                        placeholder="E  u fichier"
+                        placeholder="Extension du fichier"
                       />
                     </Stack>
                     
                   <Stack direction="row" spacing={2} alignItems="center">
                       <TextField
-                        label="Date Cuilli"
+                        label="Date de cueillie"
                         type="date"
                         variant="outlined"
                         fullWidth
@@ -632,7 +632,7 @@ const extractDateFromFilename = (fileName: string, instrumentType: string): stri
                     </Stack>
                     <Stack direction="row" spacing={2} alignItems="center">
                       <TextField
-                        label="Date import"
+                        label="Date d'import"
                         type="date"
                         variant="outlined"
                         fullWidth

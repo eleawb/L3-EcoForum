@@ -33,11 +33,11 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
   const [selectedInstrumentId, setSelectedInstrumentId] = useState<number | null>(null);//ID de l instrument
   const [selectedInstrument, setSelectedInstrument] = useState<string>(''); // nom_outil
   const [numInstrument, setNumInstrument] = useState<string>(''); //num_instrument
-  const [instruments, setInstrumentsDisponibles] = useState([]); //liste dinstruments disponibles sur la BDD
+  const [instruments, setInstrumentsDisponibles] = useState<any[]>([]); //liste dinstruments disponibles sur la BDD
   const [showAdditionalInputs, setShowAdditionalInputs] = useState<boolean>(false);
   const [utilisateur, setUtilisateur] = useState<string>('');
   const [selectedResponsable,setSelectedResponsable] = useState<string>('');
-  const [responsables, setResponsablesDisponibles] = useState([]);
+  const [responsables, setResponsablesDisponibles] = useState<any[]>([]);
   const [isNewResponsable, setIsNewResponsable] = useState<boolean>(false);//Check si le repssable fichier fut cree pour cet ajout
   const [showCreationRespInputs, setShowCreationRespInputs] = useState<boolean>(false);
   const [nom, setNom] = useState<string>('');
@@ -63,12 +63,12 @@ const fetchData = async () => {
 
                 const instrumentsRes = await fetch('http://localhost:3000/api/instruments')
                 const instrumentsData = await instrumentsRes.json()
-                console.log("instruments reçues du backend:", instrumentsData) 
+                console.log("Instruments reçus du backend:", instrumentsData) 
                 setInstrumentsDisponibles(instrumentsData || [])
 
                 const respononsablesRes = await fetch('http://localhost:3000/api/responsables')
                 const respononsablesData = await respononsablesRes.json()
-                console.log("Respononsables reçues du backend:", respononsablesData)
+                console.log("Responsables reçus du backend:", respononsablesData)
                 setResponsablesDisponibles(respononsablesData || [])
 
             } catch (error) {
@@ -87,8 +87,9 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 */ 
 
   //Gestion du changement d instrument
-  const InstrumentChange = (event: SelectChangeEvent) => {
+  const InstrumentChange = (event: SelectChangeEvent<string>) => {
     const selectedId = parseInt(event.target.value);
+    if (isNaN(selectedId)) return //si conversion pas réussie
     setSelectedInstrumentId(selectedId);
   
       const instrument = instruments.find(i => i.id_instrument === selectedId);
@@ -200,7 +201,14 @@ const handleCreateResponsable = async () => {
       event.preventDefault();
 
       console.log('Instrument:', selectedInstrument);
-      console.log('Uploading file:', selectedFile.name);
+      if (selectedFile) {
+
+      console.log('Uploading file:', selectedFile.name)
+      }else {
+        console.log('No file selected')
+        alert('Veuillez sélectionner un fichier')
+        return
+    }
   }
 /*
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
@@ -228,7 +236,7 @@ return(
               <FormControl fullWidth required>
               <InputLabel>Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier</InputLabel>
               <Select
-                value={selectedInstrumentId || ''} 
+                value={selectedInstrumentId?.toString() || ''} 
                 onChange={InstrumentChange}
                 label="Sélectionnez l'instrument pour lequel vous souhaitez déposer un fichier"
               >
@@ -244,7 +252,7 @@ return(
             </FormControl>
 
               <TextField
-              label="Numero de l'instrument"
+              label="Numéro de l'instrument"
               variant="outlined"
               fullWidth
               required
@@ -284,7 +292,7 @@ return(
                       required
                       value={utilisateur}
                       onChange={(e) => setUtilisateur(e.target.value)}
-                      placeholder="Qui veut deposer le fichier"
+                      placeholder="Qui veut déposer le fichier"
                     />
 
                     <FormControl fullWidth required>
@@ -310,7 +318,7 @@ return(
                     onClick={(e) => setShowCreationRespInputs(true)}
                     sx={{ minWidth: '100px', height: '56px' }}
                     >
-                    Creer nouveau responsable fichier  
+                    Créer nouveau responsable fichier  
                     </Button>
                     
                    {showCreationRespInputs &&(
@@ -325,13 +333,13 @@ return(
                       placeholder="Entrez votre nom"
                     />
                     <TextField
-                      label="Prenom"
+                      label="Prénom"
                       variant="outlined"
                       fullWidth
                       required
                       value={prenom}
                       onChange={(e) => setPrenom(e.target.value)}
-                      placeholder="Entrez votre prenom"
+                      placeholder="Entrez votre prénom"
                     />
                     <TextField
                       label="Mail"
@@ -348,25 +356,25 @@ return(
                         onClick={handleCreateResponsable}
                         sx={{ minWidth: '100px', height: '56px' }}
                       >
-                        Creer
+                        Créer
                       </Button>
 
                     </>
                     )}
                     
                     <TextField
-                          label="Numero de serie"
+                          label="Numéro de série"
                           variant="outlined"
                           fullWidth
                           required
                           value={numSerie}
                           onChange={(e) => setNumSerie(e.target.value)}
-                          placeholder="Entrez le numero de serie"
+                          placeholder="Entrez le numéro de série"
                       />
                     
                   <Stack direction="row" spacing={2} alignItems="center">
                       <TextField
-                        label="Date Cuilli"
+                        label="Date de cueillie"
                         type="date"
                         variant="outlined"
                         fullWidth
@@ -378,7 +386,7 @@ return(
                     </Stack>
                     <Stack direction="row" spacing={2} alignItems="center">
                       <TextField
-                        label="Date import"
+                        label="Date d'import"
                         type="date"
                         variant="outlined"
                         fullWidth
@@ -399,13 +407,13 @@ return(
 
                     <Stack direction="row" spacing={2} alignItems="center">
                       <TextField
-                        label="Format(extension)"
+                        label="Format (extension)"
                         variant="outlined"
                         fullWidth
                         required
                         value={extension}
                         onChange={(e) => setExtension(e.target.value)}
-                        placeholder="E  u fichier"
+                        placeholder="Extension du fichier"
                       />
                     </Stack>
 
