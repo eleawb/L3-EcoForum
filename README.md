@@ -20,12 +20,12 @@ Dans # package.json, explications des dépendences
 voir s'il suffit de taper "npm run dependencies" et "devDependencies" pour installer les dépendences
 
 
-TEST POUR SE CONNECTER A LA BDD ECOFORUMV4 (avec intégration données hobo)
+TEST POUR SE CONNECTER A LA BDD ECOFORUMV7 (avec intégration données hobo_n°02, hobo_n°36 et tms4 (puis plus tard intégration par ajout de fichier du reste))
 
 avant tout, créez vous un fichier .env dans /Base_de_donnees et ajoutez : 
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=EcoForumV4
+DB_NAME=EcoForumV7
 DB_USER=postgres
 DB_PASSWORD=mdp
 
@@ -34,8 +34,8 @@ normalement .env est ajouté dans .gitignore pour ne pas que le fichier soit pus
 
 ENSUITE :
 
-- soit sur pgAdmin : créer une bdd vide EcoForumV4, clic droit sur la base, "Query Tool", Menu File, Open, choisir EcoForumV4.sql, Execute / Play
-- soit ligne de cmd : psql -U postgres -d EcoForumV4 -f EcoForumV4.sql
+- soit sur pgAdmin : créer une bdd vide EcoForumV7, clic droit sur la base, "Query Tool", Menu File, Open, choisir EcoForumV7.sql, Execute / Play
+- soit ligne de cmd : psql -U postgres -d EcoForumV7 -f EcoForumV7.sql
 
 se mettre dans dossier racine : npm install (installe tous les imports et dépendances)
 se mettre dans /mon-projet
