@@ -50,7 +50,7 @@ def nonMeta(choixScript, instrument, metaJson, cheminFichierMesure):
     @param metaJson : string, le chemin du fichier de mesure pour le supprimer si la réponse du script est négative
     """
     try:
-        retour = subprocess.run(["python", "./Base_de_donnees/"+choixScript+instrument.lower()+".py", metaJson], shell=True, capture_output=True, text=True, check=True)
+        retour = subprocess.run(["python", "./Base_de_donnees/"+choixScript+ "_" + instrument.lower()+".py", metaJson], shell=True, capture_output=True, text=True, check=True)
         #éxécution du script en permettant de stocker la valeur de "retour"(les print)
         #print(retour.stdout)           #"Retour" de notre script si tout s'est bien passé
         retJson = json.loads(retour.stdout)
