@@ -30,7 +30,7 @@ def meta(choixScript, type_fichiers, fichiers):
                     sys.exit(json.dumps({"reussite":False, "commentaire":f"Pas de {choixScript} de projet sans {choixScript} de personne"}))
                 args.append(f"--ficProj {fichiers[i]}")
     try:
-        retour = subprocess.run(["python", f"./{choixScript}_metadonnees.py"]+args, shell=True, capture_output=True, text=True, check=True)
+        retour = subprocess.run(["python", f"../Base_de_donnees/{choixScript}_metadonnees.py"]+args, shell=True, capture_output=True, text=True, check=True)
         #Exécution du script en permettant de stocker la valeur de "retour"(les print)
         print(retour.stdout)           #"Retour" de notre script si tout s'est bien passé
     except subprocess.CalledProcessError as e:
@@ -50,7 +50,7 @@ def nonMeta(choixScript, instrument, metaJson, cheminFichierMesure):
     @param metaJson : string, le chemin du fichier de mesure pour le supprimer si la réponse du script est négative
     """
     try:
-        retour = subprocess.run(["python", "./Base_de_donnees/"+choixScript+ "_" + instrument.lower()+".py", metaJson], shell=True, capture_output=True, text=True, check=True)
+        retour = subprocess.run(["python", "../Base_de_donnees/"+choixScript+ "_" + instrument.lower()+".py", metaJson], shell=True, capture_output=True, text=True, check=True)
         #éxécution du script en permettant de stocker la valeur de "retour"(les print)
         #print(retour.stdout)           #"Retour" de notre script si tout s'est bien passé
         retJson = json.loads(retour.stdout)
