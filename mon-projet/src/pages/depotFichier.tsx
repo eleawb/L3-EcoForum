@@ -119,10 +119,27 @@ $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
       if (response.ok) {
         const result = await response.json();
         console.log('Upload success:', result);
-        setSelectedFile(file);
-        setShowAdditionalInputs(true);
-      }else{
-            alert('Erreur sauvagarde');
+
+        //Verification avant de passer au reste du FORM
+        const verificationResult = await sendInstrumentInfo(
+            selectedInstrument, 
+            numInstrument, 
+            result.file.path// 
+          ); //si reusite de verification, montrer le reste des inputs
+        if (verificationResult && verificationResult.reussite === true) {
+            setSelectedFile(file);
+            setShowAdditionalInputs(true);
+            console.log('Verification passed:', verificationResult.commentaire);
+
+
+      }else {
+            //on ne montres pas le reste des inputs
+            const errorMsg = verificationResult?.commentaire || 'Verification failed';
+            alert(`Verification failed: ${errorMsg}`);
+        }
+      }
+      else {
+          alert('Erreur sauvegarde');
         }
       } catch (error) {
         console.error('Upload error:', error);
@@ -202,6 +219,37 @@ const handleCreateResponsable = async () => {
       console.log('Instrument:', selectedInstrument);
       console.log('Uploading file:', selectedFile.name);
   }
+
+//////////////////////////////////Script de verification//////////////////////////////////////////////////
+  const sendInstrumentInfo = async (nom_outil: string, num_instrument: string, filePath: string) => {
+    
+    try {
+      {/*console.log(nom_outil,num_instrument);*/}
+      const response = await fetch('http://localhost:3000/api/scriptVerif', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nom_outil: nom_outil,
+          num_instrument: num_instrument,
+          chemin_source: filePath
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Script verification result:', data);
+        return data;
+      } else {
+        console.error('Failed to run verification script');
+        return null;
+      }
+    } catch (error) {
+      console.error('Error running verification:', error);
+      return null;
+    }
+  };
+//////////////////////////////////Script de verification//////////////////////////////////////////////////
 /*
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 REACT

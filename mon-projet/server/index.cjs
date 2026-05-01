@@ -9,6 +9,7 @@ const { PythonShell } = require('python-shell')
 const fs = require('fs')
 const multer = require('multer')
 const path = require('path')
+const { spawn } = require('child_process')
 const app = express()
 const port = 3000
 
@@ -686,101 +687,69 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
 /*
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-Python-Shell VERIFICATION
+VERIFICATION
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-
-
-// cet middleware permet de parser linformation du FOMR encode dans lURL pour le rendre utilisable
-app.use(express.urlencoded({ extended: true }));
-
-
-//Route Script de validation de HOBO
-app.post('/api/validate-hobo-file', async (req, res) => {
-
-    //Extraction des informations de la requete POST 
-    const { fichier_mesure, nom_outil, num_instrument } = req.body;
+*/
+app.post('/api/scriptVerif', async (req, res) => {
+    let { nom_outil, num_instrument, chemin_source } = req.body
     
-    //Verification que tout les champs soit completes
-    if (!fichier_mesure || !nom_outil || !num_instrument) {
-        return res.status(400).json({
-            success: false,
-            error: 'champs non completes: fichier_mesure, nom_outil, num_instrument'
-        });
+    console.log('Received verification request:', { chemin_source, nom_outil, num_instrument })
+    // Build the JSON structure expected by controleur.py
+    const jsonInput = {
+        script: "verification",
+        chemin_source: chemin_source,
+        nom_outil: nom_outil,
+        num_instrument: num_instrument
     }
-    //Creation du file path temporel
-    let tempFilePath = null;
-    //Creation du JSON quon va feed le code de verif
+    
+    // Create temp JSON file
+    const tempJsonPath = path.join(__dirname, 'temp_verif_' + Date.now() + '.json')
+    
     try {
-        const jsonInput = {
-            script: "verification",           // la validation a tourner
-            fichier_mesure: fichier_mesure,   // chemin
-            nom_outil: nom_outil,             // nom de linstrument
-            num_instrument: num_instrument    // numero de linstrument
-        };
-    //ON convertis le JS en un object JSON string
-    const jsonString = JSON.stringify(jsonInput, null, 2);
+        fs.writeFileSync(tempJsonPath, JSON.stringify(jsonInput, null, 2), 'utf-8')
         
-    //Creation d un file path unique utilisant le dossier temporaire du systeme
-    const os = require('os');
-    tempFilePath = path.join(os.tmpdir(), `hobo_validation_${Date.now()}.json`);
-
-    //On ecrit le JSON dans le fichier temporel
-    fs.writeFileSync(tempFilePath, jsonString, 'utf8');
-    console.log(`Created temporary JSON file: ${tempFilePath}`);//verification
-
-    //Configuration du Python-Shell
-    const scriptPath = path.join(__dirname, 'C:\\Users\\DELL\\Desktop\\CMI\\L3\\yetagain\\projet-l3-ecoforum\\Base_de_donnees', 'verification_hobo.py');//le path doit etre adapte la ou le script de validation seras sur le serveur
-    
-    //Configuration des options pour run le script 
-    const options = {
-        mode: 'text',
-        pythonOptions: ['-u'],//cette option permet de recevoir des resultats en temps reel
-        scriptPath: path.dirname(scriptPath),//Permet de trouver le script python
-        args: ['--json', tempFilePath]
-
-
-    //Execution du script et recollection le output
-    PythonShell.run(path.basename(scriptPath), options, (err, results) => {
-                if (err) {
-                console.error('PythonShell error:', err);
-                return res.status(500).json({
-                    success: false,
-                    error: 'Failed to execute Python validation script',
-                    details: err.message
-                });
-            }
-            //Recuperation de la derniere valeur qui devrait etre True ou False
-            const lastOutput = results[results.length - 1].trim();
-             
-            const isValid = lastOutput === 'True';
-            console.log(`Validation result for ${fichier_mesure}: ${isValid}`);//Visualisation en console
-            
-            return res.json({
-                success: true,
-                isValid: isValid,       // Boolean: true = si le fichier est valide
-                message: isValid 
-                    ? 'File validation passed' 
-                    : 'File validation failed - check filename, column count, or headers',
-                rawOutput: results 
-            });
-    });
-    
-        }catch (error) {
-        // Catch any unexpected errors (file writing issues, etc.)
-        console.error('Server error:', error);
+        // CALL CONTROLEUR.PY (not the specific script directly)
+        const options = {
+            mode: 'text',
+            pythonPath: 'python',
+            pythonOptions: ['-u'],
+            scriptPath: path.join('../Base_de_donnees'), // Point to mon-projet folder where controleur.py is
+            args: [tempJsonPath]
+        }
         
-        return res.status(500).json({
-            success: false,
-            error: 'Erreur interne de validation',
-            details: error.message
-        });
-
-
-});
-    
-
+        PythonShell.run('controleur.py', options)
+            .then(messages => {
+                fs.unlinkSync(tempJsonPath)
+                const lastMessage = messages[messages.length - 1]
+                try {
+                    const result = JSON.parse(lastMessage)
+                    res.json(result)
+                } catch (parseError) {
+                    res.status(500).json({
+                        reussite: false,
+                        commentaire: `Failed to parse output: ${lastMessage}`
+                    })
+                }
+            })
+            .catch(err => {
+                if (fs.existsSync(tempJsonPath)) fs.unlinkSync(tempJsonPath)
+                console.error('PythonShell error:', err)
+                res.status(500).json({
+                    reussite: false,
+                    commentaire: `Script error: ${err.message}`
+                })
+            })
+    } catch (err) {
+        if (fs.existsSync(tempJsonPath)) fs.unlinkSync(tempJsonPath)
+        res.status(500).json({
+            reussite: false,
+            commentaire: `Server error: ${err.message}`
+        })
+    }
+})
+/*
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-Python-Shell VERIFICATION
+VERIFICATION
 $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 */
 
