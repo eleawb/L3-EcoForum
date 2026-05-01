@@ -499,74 +499,111 @@ app.post('/api/recherche', async (req, res) => {
        const entetesGlobales = Array.from(uniqueColonnes.keys())
        
 
-       // construction des résultats
-       const idsMesureVus = new Set() //Set pr éviter les doublons
-        let tousLesResultats = []
+       //construction des résultats: regroupement par date pr les instruments à plusieurs variables (ex dendrometre : une ligne pr temperature, une ligne pr variation_diametre mais il faut une seule ligne pour tt par date)
+            const idsMesureVus = new Set() //comme ça pas de doublons (valeurs uniques)
+            const mesuresParDate = new Map() //regroupe les mesures "date_heure|instrument"
 
-        for (const [id, instrument] of instrumentsMap) {
-            if (instrument.mesures.length === 0) continue
-            
-            for (const row of instrument.mesures) {
-                //ignorer les doublons d'id_mesure
-                if (idsMesureVus.has(row.id_mesure)) continue
-                idsMesureVus.add(row.id_mesure)
+            for (const [id, instrument] of instrumentsMap) {
+                if (instrument.mesures.length === 0) continue
                 
-                const nouvelleLigne = {}
-                nouvelleLigne["Instrument"] = row.instrument
-                nouvelleLigne["Capteur"] = row.capteur
-           
-               //remplissage des colonnes avec les vrais noms
-                for (let i = 0; i < instrument.nomsColonnes.length; i++) {
-                    const colName = instrument.nomsColonnes[i]
+                //on parcourt ttes les lignes de mesures
+                for (const row of instrument.mesures) {
+                    //éviter doublons
+                    if (idsMesureVus.has(row.id_mesure)) continue
+                    idsMesureVus.add(row.id_mesure)
                     
-                    //si c'est la colonne de donnée (la seule qui n'est pas Instrument, Capteur, Date)
+                    const dateKey = `${row.date_heure}|${row.instrument}` //crée une clé unique date+instrument
+                    
+                    //pour chaque regroupement date|instrument on crée un dico (pr dendrometre : {"TemperatureDendro" : ..., "variation_diametre :"...})
+                    //si 1ère fois qu'on voit cette date pr cet instrument on met dans mesurespardate
+                    if (!mesuresParDate.has(dateKey)) {
+                        mesuresParDate.set(dateKey, {
+                            date_heure: row.date_heure,
+                            instrument: row.instrument,
+                            capteur: row.capteur,
+                            valeurs: {}, //dico avec valeurs par variable
+                            coefficient_applique: row.coefficient_applique,
+                            est_en_maintenance: row.est_en_maintenance
+                        })
+                    }
+                    
+                    const entry = mesuresParDate.get(dateKey) //récupère l'objet corresppondant à la clé date|instru
+
+                    //utiliser description_mesure comme nom de colonne
+                    const colName = row.description_mesure
+                    
+                    //stocker la valeur dans la bonne colonne
+                    if (row.valeur_mesure_corrigee !== null && row.valeur_mesure_corrigee !== undefined) {
+                        entry.valeurs[colName] = row.valeur_mesure_corrigee
+                    } else if (row.valeur_mesure !== null && row.valeur_mesure !== undefined) {
+                        entry.valeurs[colName] = row.valeur_mesure
+                    } else {
+                        entry.valeurs[colName] = '-'
+                    }
+                }
+            }
+
+            //prendre tous les noms de colonnes uniques (vu que Set)
+            const tousNomsColonnes = new Set()
+            for (const [id, instrument] of instrumentsMap) {
+                for (const colName of instrument.nomsColonnes) {
+                    tousNomsColonnes.add(colName)
+                }
+            }
+            const nomsColonnesGlobaux = Array.from(tousNomsColonnes)
+
+
+            //construire les lignes finales regroupées
+            let tousLesResultats = []
+
+            for (const [dateKey, entry] of mesuresParDate) {
+                const nouvelleLigne = {}
+                //pr récapituler l'insrument choisi
+                nouvelleLigne["Instrument"] = entry.instrument
+                nouvelleLigne["Capteur"] = entry.capteur
+                
+                //on crée une ligne par groupe fait
+                //on parcourt ttes les colonnes
+                for (let i = 0; i < nomsColonnesGlobaux.length; i++) {
+                    const colName = nomsColonnesGlobaux[i]
+                    
+                    //soit colonne de données
                     if (colName !== "Instrument" && colName !== "Capteur" && 
                         !colName.toLowerCase().includes('date') && !colName.toLowerCase().includes('heure')) {
-                        //valeur mesurée
-                        if (row.valeur_mesure_corrigee !== null && row.valeur_mesure_corrigee !== undefined) {
-                            nouvelleLigne[colName] = row.valeur_mesure_corrigee
-                            //ajouter une indication que la valeur est corrigée
-                            nouvelleLigne[`${colName}_corrige`] = true
-                        } else if (row.valeur_mesure !== null && row.valeur_mesure !== undefined) {
-                            nouvelleLigne[colName] = row.valeur_mesure
-                        } else {
-                            nouvelleLigne[colName] = '-'
-                        }
+                        //on prend la valeur du dico
+                        nouvelleLigne[colName] = entry.valeurs[colName] || '-'
                     }
-                    //si c'est la colonne date/heure
+                    //soit colonne date/heure
                     else if (colName.toLowerCase().includes('date') || colName.toLowerCase().includes('heure')) {
-                        nouvelleLigne[colName] = row.date_heure 
-                            ? new Date(row.date_heure).toLocaleString('fr-FR')
+                        nouvelleLigne[colName] = entry.date_heure 
+                            ? new Date(entry.date_heure).toLocaleString('fr-FR')
                             : '-'
                     }
+                    //ou autres colonnes
                     else {
                         nouvelleLigne[colName] = '-'
                     }
-
-                }
-
-                //affichage colonne coeffs correcteurs que si présence de valeurs corrigées
-                if (afficherColonneCoeff) {
-                    if (row.coefficient_applique !== 0 && row.coefficient_applique !== undefined) {
-                        nouvelleLigne["Coefficient correcteur"] = `${row.coefficient_applique}`
-                    } else {
-                        nouvelleLigne["Coefficient correcteur"] = "-"
-                    }
-                }
-
-
-                //afficher colonne maintenance 
-                if (afficherColonneMaintenance){
-                    nouvelleLigne["Mesure prise sous maintenance ?"] = row.est_en_maintenance ? "Oui" : "Non" //oui si sous maintenance, non sinon
                 }
                 
-               tousLesResultats.push(nouvelleLigne)
-           }
-       }
+                //colonne coeff correcteur si corrections 
+                if (afficherColonneCoeff) {
+                    nouvelleLigne["Coefficient correcteur"] = (entry.coefficient_applique !== 0 && entry.coefficient_applique !== undefined) 
+                        ? `${entry.coefficient_applique}` 
+                        : "-"
+                }
+                
+                //colonne si mesure prise sous maintenance
+                if (afficherColonneMaintenance) {
+                    nouvelleLigne["Mesure prise sous maintenance ?"] = entry.est_en_maintenance ? "Oui" : "Non"
+                }
+                
+                tousLesResultats.push(nouvelleLigne)
+            }
+       
        
        const previewResultats = tousLesResultats.slice(0, 20)
        
-       //envoi des résultats 
+       //ett envoi des résultats 
        res.json({
            resultats: tousLesResultats,
            previewResultats: previewResultats,
