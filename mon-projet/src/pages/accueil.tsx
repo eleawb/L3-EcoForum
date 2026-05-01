@@ -27,7 +27,7 @@ function Accueil() { //composant principal
       <AppBar position="static"> 
         <Toolbar> {/*éléments de la barre nav situés à côté*/}
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            EcoForum
+            ECOFORUM
           </Typography>
           <Button color="inherit" onClick={() => navigate('/connexion')}>Connexion</Button>
 
