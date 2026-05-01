@@ -1,0 +1,19 @@
+{
+    "script" : "integration",
+    "est_responsable_fichier" : true,
+    "mail_responsable" : "oriane.roux@etu.umontpellier.fr",
+    "nom" : "Roux",
+    "prenom" : "Oriane",
+    "fonction" : "Developpeur",
+    "encadre_par" : "marine.zwicke@umontpellier.fr",
+   
+    "chemin_source" : "./Dendrometre/data_dendro_92261195_2026_03_26_0.csv",
+    "type_source" : "fichier_mesure",
+    "nom_outil" : "Dendrometre",
+    "num_instrument" : "Dendro_92261195",
+    "num_serie" : "92261195",
+    "extension" : "csv",
+    "date_recueil" : "2026-03-26 00:00:00",
+    "date_import" : "2026-04-30 17:26:18",
+    "commentaire" : "C'est bien de tester son code pour Dendromètre :)"
+}
