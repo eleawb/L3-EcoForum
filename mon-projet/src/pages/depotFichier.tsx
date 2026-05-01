@@ -241,7 +241,7 @@ const handleCreateResponsable = async () => {
         console.log('Script verification result:', data);
         return data;
       } else {
-        console.error('Failed to run verification script');
+        console.error('Failed to run verification script'); 
         return null;
       }
     } catch (error) {

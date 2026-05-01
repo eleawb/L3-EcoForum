@@ -656,8 +656,26 @@ const storage = multer.diskStorage({
     cb(null, uploadDir)
   },
   filename: function (req, file, cb) {
-   
-    cb(null, file.originalname)
+    //let utf8Filename = file.originalname
+    //Verifier si le file nest pas null
+    if (!file || !file.originalname) {
+      cb(null, `file-${Date.now()}`)
+      return
+    }
+
+
+       // Fix UTF-8 encoding
+    let utf8Filename = file.originalname
+    try {
+      const latin1Buffer = Buffer.from(file.originalname, 'latin1')
+      utf8Filename = latin1Buffer.toString('utf8')
+    } catch (e) {
+      utf8Filename = file.originalname
+    }
+    utf8Filename = utf8Filename.replace(/[/\\:*?"<>|]/g, '_')
+
+
+    cb(null,utf8Filename)
   }
 })
 
