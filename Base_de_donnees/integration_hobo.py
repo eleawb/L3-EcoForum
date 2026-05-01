@@ -408,7 +408,7 @@ def integration_hobo(ficjson):
             dico["commentaire"] = ""
             print(json.dumps(dico))
 
-
+    os.remove(fichiercsv)
 
 
 
