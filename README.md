@@ -20,7 +20,7 @@ Dans # package.json, explications des dépendences
 voir s'il suffit de taper "npm run dependencies" et "devDependencies" pour installer les dépendences
 
 
-TEST POUR SE CONNECTER A LA BDD ECOFORUMV7 (avec intégration données hobo_n°02, hobo_n°36 et tms4 (puis plus tard intégration par ajout de fichier du reste))
+TEST POUR SE CONNECTER A LA BDD ECOFORUMV7 (avec intégration données hobo_n°02, hobo_n°36, tms4, dendromètre (puis plus tard intégration par ajout de fichier du reste))
 
 avant tout, créez vous un fichier .env dans /Base_de_donnees et ajoutez : 
 DB_HOST=localhost
