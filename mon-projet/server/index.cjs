@@ -497,108 +497,167 @@ app.post('/api/recherche', async (req, res) => {
 
        
        const entetesGlobales = Array.from(uniqueColonnes.keys())
+
+       //détecte si l'instrument a plusieurs variables mesurées vu que pour le dendromètre on a 2 variables différentes
+        const estMultiVariables = (instrument) => {
+            //check s'il y a plusieurs descriptions_mesure différentes
+            const descriptions = new Set()
+            for (const row of instrument.mesures) {
+                descriptions.add(row.description_mesure)
+            }
+            return descriptions.size > 1
+        }
        
 
        //construction des résultats: regroupement par date pr les instruments à plusieurs variables (ex dendrometre : une ligne pr temperature, une ligne pr variation_diametre mais il faut une seule ligne pour tt par date)
             const idsMesureVus = new Set() //comme ça pas de doublons (valeurs uniques)
             const mesuresParDate = new Map() //regroupe les mesures "date_heure|instrument"
-
+            //construire les lignes finales regroupées
+            let tousLesResultats = []
+            
             for (const [id, instrument] of instrumentsMap) {
                 if (instrument.mesures.length === 0) continue
-                
-                //on parcourt ttes les lignes de mesures
+
+                //check si c'est un instrument à plusieurs variables (comme dendromètre)
+                const multiVar = estMultiVariables(instrument)
+
+                if (multiVar){ //cas multivariables
+                    //on parcourt ttes les lignes de mesures
+                    for (const row of instrument.mesures) {
+                        //éviter doublons
+                        if (idsMesureVus.has(row.id_mesure)) continue
+                        idsMesureVus.add(row.id_mesure)
+                        
+                        const dateKey = `${row.date_heure}|${row.instrument}` //crée une clé unique date+instrument
+                        
+                        //pour chaque regroupement date|instrument on crée un dico (pr dendrometre : {"TemperatureDendro" : ..., "variation_diametre :"...})
+                        //si 1ère fois qu'on voit cette date pr cet instrument on met dans mesurespardate
+                        if (!mesuresParDate.has(dateKey)) {
+                            mesuresParDate.set(dateKey, {
+                                date_heure: row.date_heure,
+                                instrument: row.instrument,
+                                capteur: row.capteur,
+                                valeurs: {}, //dico avec valeurs par variable
+                                coefficient_applique: row.coefficient_applique,
+                                est_en_maintenance: row.est_en_maintenance
+                            })
+                        }
+                        
+                        const entry = mesuresParDate.get(dateKey) //récupère l'objet corresppondant à la clé date|instru
+
+                        //utiliser description_mesure comme nom de colonne
+                        const colName = row.description_mesure
+                        
+                        //stocker la valeur dans la bonne colonne
+                        if (row.valeur_mesure_corrigee !== null && row.valeur_mesure_corrigee !== undefined) {
+                            entry.valeurs[colName] = row.valeur_mesure_corrigee
+                        } else if (row.valeur_mesure !== null && row.valeur_mesure !== undefined) {
+                            entry.valeurs[colName] = row.valeur_mesure
+                        } else {
+                            entry.valeurs[colName] = '-'
+                        }
+                    }
+
+                //prendre tous les noms de colonnes uniques (vu que Set)
+                const tousNomsColonnes = new Set()
+                for (const [id, instrument] of instrumentsMap) {
+                    for (const colName of instrument.nomsColonnes) {
+                        tousNomsColonnes.add(colName)
+                    }
+                }
+                const nomsColonnesGlobaux = Array.from(tousNomsColonnes)
+
+                for (const [dateKey, entry] of mesuresParDate) {
+                    const nouvelleLigne = {}
+                    //pr récapituler l'insrument choisi
+                    nouvelleLigne["Instrument"] = entry.instrument
+                    nouvelleLigne["Capteur"] = entry.capteur
+                    
+                    //on crée une ligne par groupe fait
+                    //on parcourt ttes les colonnes
+                    for (let i = 0; i < nomsColonnesGlobaux.length; i++) {
+                        const colName = nomsColonnesGlobaux[i]
+                        
+                        //soit colonne de données
+                        if (colName !== "Instrument" && colName !== "Capteur" && 
+                            !colName.toLowerCase().includes('date') && !colName.toLowerCase().includes('heure')) {
+                            //on prend la valeur du dico
+                            nouvelleLigne[colName] = entry.valeurs[colName] || '-'
+                        }
+                        //soit colonne date/heure
+                        else if (colName.toLowerCase().includes('date') || colName.toLowerCase().includes('heure')) {
+                            nouvelleLigne[colName] = entry.date_heure 
+                                ? new Date(entry.date_heure).toLocaleString('fr-FR')
+                                : '-'
+                        }
+                        //ou autres colonnes
+                        else {
+                            nouvelleLigne[colName] = '-'
+                        }
+                    }
+                    
+                    //colonne coeff correcteur si corrections 
+                    if (afficherColonneCoeff) {
+                        nouvelleLigne["Coefficient correcteur"] = (entry.coefficient_applique !== 0 && entry.coefficient_applique !== undefined) 
+                            ? `${entry.coefficient_applique}` 
+                            : "-"
+                    }
+                    
+                    //colonne si mesure prise sous maintenance
+                    if (afficherColonneMaintenance) {
+                        nouvelleLigne["Mesure prise sous maintenance ?"] = entry.est_en_maintenance ? "Oui" : "Non"
+                    }
+                    
+                    tousLesResultats.push(nouvelleLigne)
+                }
+            } else { //cas monovariable comme hobo et tms4
                 for (const row of instrument.mesures) {
-                    //éviter doublons
                     if (idsMesureVus.has(row.id_mesure)) continue
                     idsMesureVus.add(row.id_mesure)
                     
-                    const dateKey = `${row.date_heure}|${row.instrument}` //crée une clé unique date+instrument
-                    
-                    //pour chaque regroupement date|instrument on crée un dico (pr dendrometre : {"TemperatureDendro" : ..., "variation_diametre :"...})
-                    //si 1ère fois qu'on voit cette date pr cet instrument on met dans mesurespardate
-                    if (!mesuresParDate.has(dateKey)) {
-                        mesuresParDate.set(dateKey, {
-                            date_heure: row.date_heure,
-                            instrument: row.instrument,
-                            capteur: row.capteur,
-                            valeurs: {}, //dico avec valeurs par variable
-                            coefficient_applique: row.coefficient_applique,
-                            est_en_maintenance: row.est_en_maintenance
-                        })
+                    const nouvelleLigne = {}
+                    nouvelleLigne["Instrument"] = row.instrument
+                    nouvelleLigne["Capteur"] = row.capteur
+               
+                    for (let i = 0; i < instrument.nomsColonnes.length; i++) {
+                        const colName = instrument.nomsColonnes[i]
+                        
+                        if (colName !== "Instrument" && colName !== "Capteur" && 
+                            !colName.toLowerCase().includes('date') && !colName.toLowerCase().includes('heure')) {
+                            if (row.valeur_mesure_corrigee !== null && row.valeur_mesure_corrigee !== undefined) {
+                                nouvelleLigne[colName] = row.valeur_mesure_corrigee
+                            } else if (row.valeur_mesure !== null && row.valeur_mesure !== undefined) {
+                                nouvelleLigne[colName] = row.valeur_mesure
+                            } else {
+                                nouvelleLigne[colName] = '-'
+                            }
+                        }
+                        else if (colName.toLowerCase().includes('date') || colName.toLowerCase().includes('heure')) {
+                            nouvelleLigne[colName] = row.date_heure 
+                                ? new Date(row.date_heure).toLocaleString('fr-FR')
+                                : '-'
+                        }
+                        else {
+                            nouvelleLigne[colName] = '-'
+                        }
                     }
                     
-                    const entry = mesuresParDate.get(dateKey) //récupère l'objet corresppondant à la clé date|instru
-
-                    //utiliser description_mesure comme nom de colonne
-                    const colName = row.description_mesure
-                    
-                    //stocker la valeur dans la bonne colonne
-                    if (row.valeur_mesure_corrigee !== null && row.valeur_mesure_corrigee !== undefined) {
-                        entry.valeurs[colName] = row.valeur_mesure_corrigee
-                    } else if (row.valeur_mesure !== null && row.valeur_mesure !== undefined) {
-                        entry.valeurs[colName] = row.valeur_mesure
-                    } else {
-                        entry.valeurs[colName] = '-'
+                    if (afficherColonneCoeff) {
+                        nouvelleLigne["Coefficient correcteur"] = (row.coefficient_applique !== 0 && row.coefficient_applique !== undefined) 
+                            ? `${row.coefficient_applique}` 
+                            : "-"
                     }
+                    
+                    if (afficherColonneMaintenance) {
+                        nouvelleLigne["Mesure prise sous maintenance ?"] = row.est_en_maintenance ? "Oui" : "Non"
+                    }
+                    
+                    tousLesResultats.push(nouvelleLigne)
                 }
             }
+        }
 
-            //prendre tous les noms de colonnes uniques (vu que Set)
-            const tousNomsColonnes = new Set()
-            for (const [id, instrument] of instrumentsMap) {
-                for (const colName of instrument.nomsColonnes) {
-                    tousNomsColonnes.add(colName)
-                }
-            }
-            const nomsColonnesGlobaux = Array.from(tousNomsColonnes)
-
-
-            //construire les lignes finales regroupées
-            let tousLesResultats = []
-
-            for (const [dateKey, entry] of mesuresParDate) {
-                const nouvelleLigne = {}
-                //pr récapituler l'insrument choisi
-                nouvelleLigne["Instrument"] = entry.instrument
-                nouvelleLigne["Capteur"] = entry.capteur
-                
-                //on crée une ligne par groupe fait
-                //on parcourt ttes les colonnes
-                for (let i = 0; i < nomsColonnesGlobaux.length; i++) {
-                    const colName = nomsColonnesGlobaux[i]
-                    
-                    //soit colonne de données
-                    if (colName !== "Instrument" && colName !== "Capteur" && 
-                        !colName.toLowerCase().includes('date') && !colName.toLowerCase().includes('heure')) {
-                        //on prend la valeur du dico
-                        nouvelleLigne[colName] = entry.valeurs[colName] || '-'
-                    }
-                    //soit colonne date/heure
-                    else if (colName.toLowerCase().includes('date') || colName.toLowerCase().includes('heure')) {
-                        nouvelleLigne[colName] = entry.date_heure 
-                            ? new Date(entry.date_heure).toLocaleString('fr-FR')
-                            : '-'
-                    }
-                    //ou autres colonnes
-                    else {
-                        nouvelleLigne[colName] = '-'
-                    }
-                }
-                
-                //colonne coeff correcteur si corrections 
-                if (afficherColonneCoeff) {
-                    nouvelleLigne["Coefficient correcteur"] = (entry.coefficient_applique !== 0 && entry.coefficient_applique !== undefined) 
-                        ? `${entry.coefficient_applique}` 
-                        : "-"
-                }
-                
-                //colonne si mesure prise sous maintenance
-                if (afficherColonneMaintenance) {
-                    nouvelleLigne["Mesure prise sous maintenance ?"] = entry.est_en_maintenance ? "Oui" : "Non"
-                }
-                
-                tousLesResultats.push(nouvelleLigne)
-            }
+            
        
        
        const previewResultats = tousLesResultats.slice(0, 20)
