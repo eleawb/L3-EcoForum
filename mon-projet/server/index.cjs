@@ -348,20 +348,6 @@ app.post('/api/recherche', async (req, res) => {
 
         let mesuresFiltrees = result.rows
 
-        // Ajoute ceci juste avant le filtrage horaire, après avoir récupéré result.rows
-        console.log("=== APERÇU DES MESURES BRUTES ===")
-        const mesures26mars = result.rows.filter(row => {
-            const dateStr = new Date(row.date_heure).toISOString().split('T')[0]
-            return dateStr === '2024-03-26'
-        })
-        console.log(`Nombre de mesures du 26 mars dans result.rows: ${mesures26mars.length}`)
-        if (mesures26mars.length > 0) {
-            console.log("Premières mesures du 26 mars:", mesures26mars.slice(0, 5).map(r => ({
-                date: r.date_heure,
-                heure: new Date(r.date_heure).getHours(),
-                valeur: r.valeur_mesure
-            })))
-}
         
         if (heuresAFiltrer.length > 0) {
             console.log("dateDebut:", dateDebut, "dateFin:", dateFin) 
@@ -499,11 +485,13 @@ app.post('/api/recherche', async (req, res) => {
 
        //afficher après colonne mesures que si minimum une valeur corrigée
        if (afficherColonneCoeff) {
+            console.log("valeur afficherColonneCoeff : ", afficherColonneCoeff)
             uniqueColonnes.set('Coefficient correcteur', true)
         } //si coeff correcteur
 
             //afficher colonne maintenance que si minimum une mesure prise sous maintenance 
         if (afficherColonneMaintenance) {
+            console.log("valeur estEnMaintenance : ", estEnMaintenance, " donc afficherColonneMiantenance : ", afficherColonneMaintenance)
             uniqueColonnes.set('Mesure prise sous maintenance ?', true)
         } 
 

@@ -1,0 +1,18 @@
+{
+    "chemin_source" : ".\\Hobo\\(n°36) 21149857 2026-01-28 15_37_05 CET.xlsx",
+    "type_source" : "fichier_mesure",
+    "script" : "integration",
+    "est_responsable_fichier" : false,
+    "mail_responsable" : "daisy.drater@umontpellier.fr",
+    "nom" : "drater",
+    "prenom" : "daisy",
+    "fonction" : "Enseignant",
+    "encadre_par" : "marine.zwicke@umontpellier.fr",
+    "nom_outil" : "Hobo",
+    "num_instrument" : "HOBO_n°36",
+    "num_serie" : "21149857",
+    "extension" : "xlsx",
+    "date_recueil" : "2026-01-28 15:37:05",
+    "date_import" : "2026-04-29 20:41:47",
+    "commentaire" : "test n°01"
+}
