@@ -282,9 +282,8 @@ if __name__ == "__main__":
         #next(reader)  # sauter les entêtes
 
         # Créer le responsable fichier s'il n'existe pas
-        if (not dico_json["est_responsable_fichier"]):
-            id_responsable = insert_responsable(dico_json["nom"], dico_json["prenom"], dico_json["mail_responsable"],\
-                dico_json["fonction"], dico_json["encadre_par"])
+        id_responsable = insert_responsable(dico_json["nom"], dico_json["prenom"], dico_json["mail_responsable"],\
+            dico_json["fonction"], dico_json["encadre_par"])
 
         # Copie le fichier et change son nom
         #nouv_fichier_mesure = copie_fichier(fichier_mesure, dico_json["nom_outil"], dico_json["date_import"])
