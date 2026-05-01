@@ -159,7 +159,10 @@ def verification_hobo(metajson):
                             #with open("retour.json", "w", encoding="utf-8") as f:
                                 #json.dump(dico, f, indent=4, ensure_ascii=False)
                             #print(os.path.join(os.getcwd(), "retour.json"))
+                            print("error 1")
                             print(json.dumps(dico))
+                            
+                            return 0
 
                         #else:
                             #print("bon nom de colonne str")
@@ -177,19 +180,26 @@ def verification_hobo(metajson):
                             #with open("retour.json", "w", encoding="utf-8") as f:
                             #    json.dump(dico, f, indent=4, ensure_ascii=False)
                             #print(os.path.join(os.getcwd(), "retour.json"))
+                            print("error 2")
                             print(json.dumps(dico))
+                            
+                            return 0
             else :
                 dico["commentaire"] = "le fichier ne contient pas le bon nombre de colonnes, nombre attendu : " + row[3]
                 #with open("retour.json", "w", encoding="utf-8") as f:
                 #    json.dump(dico, f, indent=4, ensure_ascii=False)
                 #print(os.path.join(os.getcwd(), "retour.json"))
+                print("error 3")
                 print(json.dumps(dico))
+                return 0
         else:
             dico["commentaire"] = "Le nom du fichier n'a pas le bon format, format attendu : " + row[5]
             #with open("retour.json", "w", encoding="utf-8") as f:
             #    json.dump(dico, f, indent=4, ensure_ascii=False)
             #print(os.path.join(os.getcwd(), "retour.json"))
+            print("error 4")
             print(json.dumps(dico))
+            return 0
 
     dico["reussite"] = True
     dico["commentaire"] = ""
@@ -212,7 +222,9 @@ def verification_hobo(metajson):
     #with open("retour.json", "w", encoding="utf-8") as f:
     #    json.dump(dico, f, indent=4, ensure_ascii=False)
     #print(os.path.join(os.getcwd(), "retour.json"))
+    print("error 5")
     print(json.dumps(dico))
+    return 0
 
 
 if __name__ == "__main__":
@@ -228,8 +240,9 @@ if __name__ == "__main__":
         #with open("retour.json", "w", encoding="utf-8") as f:
             #json.dump(dico, f, indent=4, ensure_ascii=False)
         #print(os.path.join(os.getcwd(), "retour.json"))
+        print("error 6")
         print(json.dumps(dico))
-
+        
     else :
 
 

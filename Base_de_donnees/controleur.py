@@ -50,7 +50,7 @@ def nonMeta(choixScript, instrument, metaJson, cheminFichierMesure):
     @param metaJson : string, le chemin du fichier de mesure pour le supprimer si la réponse du script est négative
     """
     try:
-        retour = subprocess.run(["python", "./Base_de_donnees/"+choixScript+"_donnees_"+instrument.lower()+".py", metaJson], shell=True, capture_output=True, text=True, check=True)
+        retour = subprocess.run(["python", "../Base_de_donnees/"+choixScript+"_donnees_"+instrument.lower()+".py", metaJson], shell=True, capture_output=True, text=True, check=True)
         #éxécution du script en permettant de stocker la valeur de "retour"(les print)
         #print(retour.stdout)           #"Retour" de notre script si tout s'est bien passé
         retJson = json.loads(retour.stdout)
@@ -69,8 +69,8 @@ def nonMeta(choixScript, instrument, metaJson, cheminFichierMesure):
         except (FileNotFoundError, PermissionError):
             print(json.dumps({"reussite":False, "commentaire":f"La commande de {choixScript} des donnees a echoue avec le code d'erreur : {e.returncode} et la copie du fichier n'a pas pu etre supprimer"}))
         
-        #print(e.stderr)            #Si l'on veut voir le message d'erreur effectuer par le script défectueux
-        #print(e.stdout)            #Si l'on veut voir les print effectuer par le script défectueux jusqu'au moment de l'erreur
+        print(e.stderr)            #Si l'on veut voir le message d'erreur effectuer par le script défectueux
+        print(e.stdout)            #Si l'on veut voir les print effectuer par le script défectueux jusqu'au moment de l'erreur
 
 
 if __name__ == "__main__":
