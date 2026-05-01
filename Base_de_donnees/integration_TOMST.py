@@ -195,10 +195,11 @@ def insert_mesure(valeur_mesure, date_heure, description_mesure, statut,\
         SELECT id_st FROM serie_temporelle ST
             JOIN capteur_localise CL ON CL.id_capteur_gen = ST.id_capteur_gen 
                 AND CL.id_loc = ST.id_loc AND CL.date_debut = ST.date_capteur_loc
-            JOIN capteur_generique ON id_capteur_generique = CL.id_capteur_gen
-            JOIN capteur ON id_capteur = id_capteur_generique
-            WHERE num_colonne = %s;
-        """, (num_col,))
+            JOIN capteur_generique CG ON CG.id_capteur_generique = CL.id_capteur_gen
+            JOIN capteur C ON C.id_capteur = CG.id_capteur_generique
+            JOIN instrument_mesure IM ON C.id_instrument = IM.id_instrument
+            WHERE num_colonne = %s AND lower(nom_outil) = lower(%s);
+        """, (num_col, nom_inst))
     id_st = cur.fetchone()
     id_st = id_st[0]
     
